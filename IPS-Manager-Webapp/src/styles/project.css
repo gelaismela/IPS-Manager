@@ -1,0 +1,41 @@
+.project-material-main {
+  max-width: 700px;
+  margin: 32px auto;
+  background: #f8f9fa;
+  padding: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.project-material-main h2 {
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.project-material-main p {
+  margin: 4px 0 12px 0;
+  color: #555;
+}
+
+.material-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  margin-top: 16px;
+}
+
+.material-table th,
+.material-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+}
+
+.material-table th {
+  background: #e9ecef;
+  color: #222;
+}
+
+.material-table tr:nth-child(even) {
+  background: #f6f6f6;
+}

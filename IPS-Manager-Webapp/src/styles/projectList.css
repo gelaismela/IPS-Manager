@@ -1,0 +1,53 @@
+.projectList-main {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 500px;
+  margin: 30px auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.projectList-main h2 {
+  font-size: 1.6rem;
+  margin-bottom: 15px;
+  text-align: center;
+  color: #333;
+}
+
+.projectList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.projectItem {
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.projectItem:hover {
+  background: #e6f0ff;
+  border-color: #4a90e2;
+  transform: translateY(-2px);
+}
+
+.loading,
+.error,
+.noProjects {
+  text-align: center;
+  font-size: 1.1rem;
+  margin-top: 20px;
+}
+
+.error {
+  color: #e74c3c;
+}
+
+.noProjects {
+  color: #777;
+}
