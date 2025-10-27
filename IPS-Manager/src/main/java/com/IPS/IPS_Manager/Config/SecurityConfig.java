@@ -39,7 +39,8 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())       // ✅ Enable CORS
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "auth/register",
+                                "/auth/register",
+                                "/auth/registerAll",
                                 "/auth/login",
                                 "/auth/forgot-password",
                                 "/auth/reset-password"
