@@ -71,22 +71,15 @@ const Delivery = () => {
     }));
   };
 
-  const handleMaterialSelection = (index, quantityOrToggle) => {
+  const handleMaterialSelection = (index, quantity) => {
     const updatedSelections = [...materialSelections];
-    if (typeof quantityOrToggle === "boolean") {
-      // Checkbox toggled
-      updatedSelections[index].selected = quantityOrToggle;
-      if (!quantityOrToggle) updatedSelections[index].selectedQuantity = 0;
-      else if (updatedSelections[index].selectedQuantity === 0)
-        updatedSelections[index].selectedQuantity = 1;
-    } else {
-      // Quantity changed
-      updatedSelections[index].selectedQuantity = Math.min(
-        Math.max(quantityOrToggle, 0),
-        updatedSelections[index].requestedQuantity
-      );
-      updatedSelections[index].selected = quantityOrToggle > 0;
-    }
+    // Quantity changed
+    updatedSelections[index].selectedQuantity = Math.min(
+      Math.max(quantity, 0),
+      updatedSelections[index].requestedQuantity
+    );
+    // Automatically select material if quantity > 0
+    updatedSelections[index].selected = quantity > 0;
     setMaterialSelections(updatedSelections);
   };
 
@@ -164,7 +157,6 @@ const Delivery = () => {
               <th>Assigned</th>
               <th>Status</th>
               <th>Assign Quantity</th>
-              <th>Select</th>
             </tr>
           </thead>
           <tbody>
@@ -178,7 +170,7 @@ const Delivery = () => {
                 <td>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     max={mat.requestedQuantity}
                     value={mat.selectedQuantity}
                     onChange={(e) =>
@@ -188,16 +180,6 @@ const Delivery = () => {
                       )
                     }
                     className="quantity-input"
-                    disabled={!mat.selected}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={mat.selected}
-                    onChange={(e) =>
-                      handleMaterialSelection(index, e.target.checked)
-                    }
                   />
                 </td>
               </tr>

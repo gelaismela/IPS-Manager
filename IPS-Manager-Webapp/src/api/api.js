@@ -1,4 +1,6 @@
-export const API_BASE = "http://localhost:8080";
+// Use environment variable or fall back to localhost for development
+export const API_BASE =
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
 
 // ✅ Helper function to include JWT automatically
 export async function authFetch(url, options = {}) {

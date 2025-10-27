@@ -18,6 +18,7 @@
   padding: 18px;
   border-radius: 6px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
 }
 
 .assignment-form {
@@ -94,14 +95,57 @@
   border-collapse: collapse;
   margin-top: 16px;
   background: #fff;
+  table-layout: fixed;
 }
 
-.material-table th, .material-table td {
+.material-table th,
+.material-table td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .material-table th {
   background: #f0f0f0;
+  font-weight: 600;
+}
+
+/* Table wrapper for horizontal scroll on small screens */
+
+/* Responsive column widths */
+.material-table th:nth-child(1),
+.material-table td:nth-child(1) {
+  width: 12%;
+} /* Request ID */
+.material-table th:nth-child(2),
+.material-table td:nth-child(2) {
+  width: 25%;
+} /* Material Name */
+.material-table th:nth-child(3),
+.material-table td:nth-child(3) {
+  width: 15%;
+} /* Requested */
+.material-table th:nth-child(4),
+.material-table td:nth-child(4) {
+  width: 15%;
+} /* Assigned */
+.material-table th:nth-child(5),
+.material-table td:nth-child(5) {
+  width: 15%;
+} /* Status */
+.material-table th:nth-child(6),
+.material-table td:nth-child(6) {
+  width: 18%;
+} /* Assign Quantity */
+
+/* Input styling within table */
+.quantity-input {
+  width: 100%;
+  max-width: 80px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 0.9em;
 }

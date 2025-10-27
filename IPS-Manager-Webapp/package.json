@@ -15,7 +15,12 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:network": "HOST=0.0.0.0 react-scripts start",
     "build": "react-scripts build",
+    "build:production": "REACT_APP_API_BASE_URL=http://YOUR_SERVER_IP:8080 npm run build",
+    "serve": "npx serve -s build -l 3000",
+    "serve:network": "npx serve -s build -l 3000 -L",
+    "setup-network": "chmod +x setup-network.sh && ./setup-network.sh",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
