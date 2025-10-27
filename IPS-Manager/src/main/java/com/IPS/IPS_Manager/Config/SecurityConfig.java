@@ -77,7 +77,10 @@ public class SecurityConfig {
                                 "http://localhost:3000",
                                 "http://192.168.100.40",
                                 "http://192.168.100.40:80",
-                                "http://192.168.100.40:8080"
+                                "http://192.168.100.40:8080",
+                                "http://192.168.100.45",
+                                "http://192.168.100.45:80",
+                                "http://192.168.100.45:8080"
                         )
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
