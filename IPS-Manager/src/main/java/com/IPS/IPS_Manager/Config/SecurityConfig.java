@@ -77,13 +77,8 @@ public class SecurityConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                String localIp = getLocalIp();
-                String origin = "http://" + localIp + ":3000";
-
-                System.out.println("🌐 CORS allowed origin: " + origin);
-
                 registry.addMapping("/**")
-                        .allowedOrigins(origin)
+                        .allowedOriginPatterns("http://192.168.*.*", "http://localhost:*")
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
@@ -92,23 +87,6 @@ public class SecurityConfig {
     }
 
 
-    private String getLocalIp() {
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                NetworkInterface iface = interfaces.nextElement();
-                Enumeration<InetAddress> addresses = iface.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    InetAddress addr = addresses.nextElement();
-                    if (!addr.isLoopbackAddress() && addr.getHostAddress().matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
-                        return addr.getHostAddress();
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-        return "localhost";
-    }
+
 
 }
