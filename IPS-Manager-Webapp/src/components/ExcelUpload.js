@@ -1,6 +1,7 @@
 // You can place this in a new file, e.g. src/components/ExcelUpload.js
 
 import React, { useRef } from "react";
+import { API_BASE } from "../api/api";
 
 const ExcelUpload = () => {
   const fileInputRef = useRef();
@@ -16,7 +17,7 @@ const ExcelUpload = () => {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:8080/api/excel/upload", {
+      const res = await fetch(`${API_BASE}/excel/upload`, {
         method: "POST",
         body: formData,
       });

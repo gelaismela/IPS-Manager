@@ -1,6 +1,15 @@
-// Use environment variable or fall back to localhost for development
+// Determine API base URL from env with safe fallbacks
+// - Dev (CRA): REACT_APP_API_BASE defaults to http://localhost:8080
+// - Prod (via Nginx): use "/api" so calls are same-origin and proxied
+// Support both REACT_APP_API_BASE and legacy REACT_APP_API_BASE_URL
+const ENV_BASE =
+  process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_BASE_URL;
 export const API_BASE =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
+  ENV_BASE && ENV_BASE.trim().length > 0
+    ? ENV_BASE
+    : process.env.NODE_ENV === "development"
+    ? "http://localhost:8080"
+    : "/api";
 
 // ✅ Helper function to include JWT automatically
 export async function authFetch(url, options = {}) {
