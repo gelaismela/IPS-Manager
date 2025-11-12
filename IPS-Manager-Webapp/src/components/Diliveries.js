@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getDeliveriesByDriver, updateDeliveryStatus } from "../api/api";
+import {
+  getDeliveriesByDriver,
+  updateDeliveryStatus,
+  getAllMaterialRequests,
+} from "../api/api";
+import { useDeliveryNotifications } from "../hooks/useDeliveryNotifications";
 import "../styles/driverDelivery.css";
 
 const ALLOWED_STATUSES = ["PENDING", "PARTIALLY_ASSIGNED", "ASSIGNED", "SENT"];
@@ -15,8 +20,12 @@ const statusLabels = {
 const DriverDelivery = () => {
   const { id: driverId } = useParams();
   const [deliveries, setDeliveries] = useState([]);
+  const [materialRequests, setMaterialRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeDelivery, setActiveDelivery] = useState(null);
+
+  // Enable browser notifications for drivers
+  useDeliveryNotifications(deliveries, materialRequests, true);
 
   useEffect(() => {
     if (!driverId) {
@@ -24,18 +33,28 @@ const DriverDelivery = () => {
       return;
     }
 
-    const fetchDriverDeliveries = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch driver's deliveries
         const driverDeliveries = await getDeliveriesByDriver(driverId);
         setDeliveries(driverDeliveries);
+
+        // Fetch material requests to get notification for new assignments
+        const requests = await getAllMaterialRequests();
+        setMaterialRequests(requests || []);
       } catch (error) {
-        console.error("Error fetching deliveries:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDriverDeliveries();
+    fetchData();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+
+    return () => clearInterval(interval);
   }, [driverId]);
 
   const formatDate = (dateString) => {
@@ -44,8 +63,11 @@ const DriverDelivery = () => {
     return date.toLocaleString();
   };
 
+  // Filter out SENT deliveries (hide old completed deliveries)
+  const activeDeliveries = deliveries.filter((d) => d.status !== "SENT");
+
   // Group deliveries by project ID
-  const groupedDeliveries = deliveries.reduce((acc, delivery) => {
+  const groupedDeliveries = activeDeliveries.reduce((acc, delivery) => {
     const projectId = delivery.materialRequest.project.id;
     if (!acc[projectId]) acc[projectId] = [];
     acc[projectId].push(delivery);

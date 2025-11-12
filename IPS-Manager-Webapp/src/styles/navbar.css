@@ -1,0 +1,73 @@
+/* Simple, clean navbar styles */
+.app-navbar {
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+}
+
+.app-navbar .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-navbar .nav-links li {
+  list-style: none;
+}
+
+.app-navbar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  text-decoration: none;
+  color: #555;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.app-navbar .nav-link:hover {
+  background: #f0f0f0;
+  color: #007bff;
+}
+
+.app-navbar .nav-link.active {
+  background: #007bff;
+  color: #fff;
+}
+
+.app-navbar .nav-link i {
+  font-size: 18px;
+}
+
+.app-navbar .nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-navbar .logout-btn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #555;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.app-navbar .logout-btn:hover {
+  background: #dc3545;
+  color: #fff;
+}

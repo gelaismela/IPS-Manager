@@ -14,6 +14,8 @@ import Delivery from "./components/Delivery";
 import Deliveries from "./components/Diliveries";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
+import NotificationSettings from "./components/NotificationSettings";
+import DriverRedirect from "./components/DriverRedirect";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -73,10 +75,37 @@ function App() {
             }
           />
           <Route
+            path="/driver"
+            element={
+              <ProtectedRoute allowedRoles={["driver", "dev"]}>
+                <DriverRedirect />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/driver-deliveries/:id"
             element={
               <ProtectedRoute allowedRoles={["driver", "dev"]}>
                 <Deliveries />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notification-settings"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  "admin",
+                  "dev",
+                  "project_manager",
+                  "driver",
+                  "head_driver",
+                ]}
+              >
+                <>
+                  <Navbar />
+                  <NotificationSettings />
+                </>
               </ProtectedRoute>
             }
           />

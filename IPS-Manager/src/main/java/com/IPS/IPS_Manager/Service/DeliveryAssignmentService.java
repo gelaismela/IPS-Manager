@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -69,4 +68,9 @@ public class DeliveryAssignmentService {
         assignment.setStatus(MaterialRequestStatus.valueOf(newStatus)); // assuming status is a String column in your entity
         return assignmentRepo.save(assignment);
     }
+
+    public List<DeliveryAssignment> getAllAssignment() {
+        return assignmentRepo.findAll();
+    }
 }
+

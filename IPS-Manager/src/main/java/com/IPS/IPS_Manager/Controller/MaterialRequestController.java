@@ -4,8 +4,6 @@ import com.IPS.IPS_Manager.DTO.AssignRequestDTO;
 import com.IPS.IPS_Manager.DTO.CreateRequestDTO;
 import com.IPS.IPS_Manager.Entity.DeliveryAssignment;
 import com.IPS.IPS_Manager.Entity.MaterialRequest;
-import com.IPS.IPS_Manager.Entity.Users;
-import com.IPS.IPS_Manager.Enum.MaterialRequestStatus;
 import com.IPS.IPS_Manager.Repository.MaterialRequestRepo;
 import com.IPS.IPS_Manager.Repository.UserRepo;
 import com.IPS.IPS_Manager.Service.DeliveryAssignmentService;
@@ -13,12 +11,9 @@ import com.IPS.IPS_Manager.Service.MaterialRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/material-requests")
@@ -33,6 +28,13 @@ public class MaterialRequestController {
     private  DeliveryAssignmentService assignmentService;
     @Autowired
     private  UserRepo userRepo;
+
+
+    @GetMapping("/all")
+    public List<DeliveryAssignment> getAllDeliveries() {
+        return assignmentService.getAllAssignment();
+    }
+
 
     // 🔹 Get specific request by ID
     @GetMapping("/{id}")

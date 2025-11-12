@@ -4,12 +4,27 @@
 // Support both REACT_APP_API_BASE and legacy REACT_APP_API_BASE_URL
 const ENV_BASE =
   process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_BASE_URL;
+const isProd = process.env.NODE_ENV === "production";
+const envBaseDev =
+  process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_BASE_URL;
+
+// Allow a lightweight runtime override for testing without rebuilds
+let runtimeOverride = null;
+try {
+  if (typeof window !== "undefined") {
+    runtimeOverride =
+      window.__API_BASE || localStorage.getItem("API_BASE_OVERRIDE");
+  }
+} catch {}
+
 export const API_BASE =
-  ENV_BASE && ENV_BASE.trim().length > 0
-    ? ENV_BASE
-    : process.env.NODE_ENV === "development"
-    ? "http://localhost:8080"
-    : "/api";
+  runtimeOverride && runtimeOverride.trim().length > 0
+    ? runtimeOverride
+    : isProd
+    ? "/api"
+    : envBaseDev && envBaseDev.trim().length > 0
+    ? envBaseDev
+    : "http://localhost:8080";
 
 // ✅ Helper function to include JWT automatically
 export async function authFetch(url, options = {}) {
@@ -34,7 +49,16 @@ export async function authFetch(url, options = {}) {
   }
 
   if (!res.ok) {
-    throw new Error(data || "Request failed");
+    const error = new Error(
+      typeof data === "object" && data?.message
+        ? data.message
+        : typeof data === "string"
+        ? data
+        : `Request failed with status ${res.status}`
+    );
+    error.status = res.status;
+    error.response = data;
+    throw error;
   }
 
   return data;
@@ -49,7 +73,28 @@ export async function login(email, password) {
     body: JSON.stringify({ mail: email, password }),
   });
   if (!res.ok) throw new Error("Login failed");
-  return res.json();
+  const data = await res.json();
+
+  // Store token and role for easy access
+  if (data.token) {
+    localStorage.setItem("token", data.token);
+    if (data.role) {
+      localStorage.setItem("user", JSON.stringify({ role: data.role, email }));
+    }
+  }
+
+  return data;
+}
+
+// Get user info by email (uses existing /auth/users endpoint)
+export async function getUserByEmail(email) {
+  const users = await authFetch("/auth/users", { method: "GET" });
+  return users.find((user) => user.mail === email);
+}
+
+// Get current logged-in user info
+export async function getCurrentUser(email) {
+  return getUserByEmail(email);
 }
 
 export function logout() {
@@ -134,6 +179,26 @@ export async function useMaterial(projectId, materialId, used) {
   });
 }
 
+export async function addMaterialToProject(projectId, materialId, quantity) {
+  return authFetch(`/projects/${projectId}/materials/add`, {
+    method: "POST",
+    body: JSON.stringify({ materialId, quantity }),
+  });
+}
+
+export async function removeMaterialFromProject(projectId, materialId) {
+  return authFetch(`/projects/${projectId}/materials/${materialId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateProjectMaterial(projectId, materialId, quantity) {
+  return authFetch(`/projects/${projectId}/materials/${materialId}`, {
+    method: "PUT",
+    body: JSON.stringify({ quantity }),
+  });
+}
+
 // MATERIALS -----------------------------------
 
 export async function getAllMaterials() {
@@ -194,9 +259,9 @@ export async function deliverMaterialRequest(id) {
   });
 }
 
-// Get all material requests
+// Get all pending material requests (for notifications)
 export async function getAllMaterialRequests() {
-  return authFetch("/material-requests/all", { method: "GET" });
+  return authFetch("/material-requests/pending", { method: "GET" });
 }
 
 // Get requests for specific project
@@ -232,6 +297,11 @@ export async function getDeliveriesByRequest(requestId) {
 
 export async function getDeliveriesByDriver(driverId) {
   return authFetch(`/deliveries/driver/${driverId}`, { method: "GET" });
+}
+
+// Get all deliveries (for notifications and monitoring)
+export async function getAllDeliveries() {
+  return authFetch("/material-requests/all", { method: "GET" });
 }
 
 const ALLOWED_STATUSES = ["PENDING", "PARTIALLY_ASSIGNED", "ASSIGNED", "SENT"];

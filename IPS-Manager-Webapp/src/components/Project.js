@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getMaterialsByProject, createMaterialRequest } from "../api/api";
 import "../styles/project.css";
+import Navbar from "./Navbar";
 
 const Project = () => {
   const { id } = useParams();
@@ -62,80 +63,83 @@ const Project = () => {
   if (!projectInfo) return <div>Project not found</div>;
 
   return (
-    <div className="project-material-main">
-      <h2>{projectInfo.name}</h2>
-      <p>
-        <strong>Project Code:</strong> {projectInfo.projectCode}
-      </p>
-      <p>
-        <strong>Address:</strong> {projectInfo.address}
-      </p>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmitRequests();
-        }}
-      >
-        <table className="material-table">
-          <thead>
-            <tr>
-              <th>Material Name</th>
-              <th>Assigned Quantity</th>
-              <th>Used Quantity</th>
-              <th>Request Quantity</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {materials.map((mat) => (
-              <tr key={mat.id}>
-                <td>{mat.material.name}</td>
-                <td>{mat.assignedQuantity}</td>
-                <td>{mat.quantityUsed}</td>
-                <td>
-                  <input
-                    type="number"
-                    min="1"
-                    value={requestQty[mat.material.id] || ""}
-                    onChange={(e) =>
-                      handleRequestChange(mat.material.id, e.target.value)
-                    }
-                    placeholder="Qty"
-                    style={{ width: "60px" }}
-                  />
-                </td>
-                <td>
-                  {requestStatus[mat.material.id] === "success" && (
-                    <span style={{ color: "green" }}>Requested!</span>
-                  )}
-                  {requestStatus[mat.material.id] === "error" && (
-                    <span style={{ color: "red" }}>Error!</span>
-                  )}
-                  {requestStatus[mat.material.id] === "pending" && (
-                    <span style={{ color: "#888" }}>Sending...</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <button
-          type="submit"
-          style={{
-            marginTop: "16px",
-            padding: "8px 24px",
-            background: "#007bff",
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            fontSize: "1em",
-            cursor: "pointer",
+    <>
+      <Navbar />
+      <div className="project-material-main">
+        <h2>{projectInfo.name}</h2>
+        <p>
+          <strong>Project Code:</strong> {projectInfo.projectCode}
+        </p>
+        <p>
+          <strong>Address:</strong> {projectInfo.address}
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmitRequests();
           }}
         >
-          Submit Requests
-        </button>
-      </form>
-    </div>
+          <table className="material-table">
+            <thead>
+              <tr>
+                <th>Material Name</th>
+                <th>Assigned Quantity</th>
+                <th>Used Quantity</th>
+                <th>Request Quantity</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {materials.map((mat) => (
+                <tr key={mat.id}>
+                  <td>{mat.material.name}</td>
+                  <td>{mat.assignedQuantity}</td>
+                  <td>{mat.quantityUsed}</td>
+                  <td>
+                    <input
+                      type="number"
+                      min="1"
+                      value={requestQty[mat.material.id] || ""}
+                      onChange={(e) =>
+                        handleRequestChange(mat.material.id, e.target.value)
+                      }
+                      placeholder="Qty"
+                      style={{ width: "60px" }}
+                    />
+                  </td>
+                  <td>
+                    {requestStatus[mat.material.id] === "success" && (
+                      <span style={{ color: "green" }}>Requested!</span>
+                    )}
+                    {requestStatus[mat.material.id] === "error" && (
+                      <span style={{ color: "red" }}>Error!</span>
+                    )}
+                    {requestStatus[mat.material.id] === "pending" && (
+                      <span style={{ color: "#888" }}>Sending...</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <button
+            type="submit"
+            style={{
+              marginTop: "16px",
+              padding: "8px 24px",
+              background: "#007bff",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              fontSize: "1em",
+              cursor: "pointer",
+            }}
+          >
+            Submit Requests
+          </button>
+        </form>
+      </div>
+    </>
   );
 };
 
