@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   getDeliveriesByDriver,
   updateDeliveryStatus,
@@ -18,7 +18,14 @@ const statusLabels = {
 };
 
 const DriverDelivery = () => {
-  const { id: driverId } = useParams();
+  // Get driver ID from localStorage instead of URL params
+  const userStr =
+    localStorage.getItem("user") || sessionStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const driverId =
+    user?.id ||
+    localStorage.getItem("userId") ||
+    sessionStorage.getItem("userId");
   const [deliveries, setDeliveries] = useState([]);
   const [materialRequests, setMaterialRequests] = useState([]);
   const [loading, setLoading] = useState(true);

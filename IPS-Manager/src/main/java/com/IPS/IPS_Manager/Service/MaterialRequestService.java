@@ -29,24 +29,27 @@ public class MaterialRequestService {
     private final ProjectMaterialRepo projectMaterialRepo;
 
 
-        public MaterialRequest createRequest(Long projectId, String materialId, int qty) {
-            Project project = projectRepo.findById(projectId)
-                    .orElseThrow(() -> new RuntimeException("Project not found"));
-            Material material = materialRepo.findById(materialId)
-                    .orElseThrow(() -> new RuntimeException("Material not found"));
+    public MaterialRequest createRequest(Long projectId, String materialId, int qty, Users createdBy) {
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+        Material material = materialRepo.findById(materialId)
+                .orElseThrow(() -> new RuntimeException("Material not found"));
 
-            MaterialRequest request = new MaterialRequest();
-            request.setProject(project);
-            request.setMaterial(material);
-            request.setRequestedQuantity(qty);
-            request.setRequestDate(LocalDate.now());
-            request.setStatus(MaterialRequestStatus.PENDING);
+        MaterialRequest request = new MaterialRequest();
+        request.setProject(project);
+        request.setMaterial(material);
+        request.setRequestedQuantity(qty);
+        request.setRequestDate(LocalDate.now());
+        request.setStatus(MaterialRequestStatus.PENDING);
+        request.setCreatedBy(createdBy);  // ✅ Set who created this request
 
-            return requestRepo.save(request);
-        }
+        return requestRepo.save(request);
+    }
 
-
-
+    // ✅ NEW METHOD - Get requests for projects managed by a project manager
+    public List<MaterialRequest> getRequestsByProjectManagerId(Long projectManagerId) {
+        return requestRepo.findByProject_ProjectManager_Id(projectManagerId);
+    }
 
     @Transactional
     public MaterialRequest assignRequest(Long requestId, AssignRequestDTO dto, Users driver) {

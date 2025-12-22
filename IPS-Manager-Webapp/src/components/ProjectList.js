@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getProjects } from "../api/api";
+import { getProjects, getMyProjects } from "../api/api";
 import "../styles/projectList.css";
-import Navbar from "./Navbar";
 
 const ProjectList = () => {
   const [projects, setProjects] = useState([]);
@@ -14,7 +13,23 @@ const ProjectList = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const data = await getProjects(); // ✅ fetch from backend
+        // Get user role from localStorage
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const userRole = user?.role?.toLowerCase();
+
+        // Fetch projects based on role
+        let data;
+        if (
+          userRole === "project_manager" ||
+          userRole === "project manager" ||
+          userRole === "projectmanager"
+        ) {
+          data = await getMyProjects(); // Project managers see only assigned projects
+        } else {
+          data = await getProjects(); // Admins see all projects
+        }
+
         setProjects(data);
         setIsPending(false);
       } catch (err) {
@@ -45,16 +60,14 @@ const ProjectList = () => {
   if (error) return <div className="error">Error: {error}</div>;
 
   return (
-    <>
-      <Navbar />
-      <div className="projectList-main">
+    <div className="projectList-main">
         <h2>All Projects</h2>
         <input
           type="text"
+          className="search-input"
           placeholder="Search by name or code"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ marginBottom: "16px", padding: "8px", width: "250px" }}
         />
         {filteredProjects.length > 0 ? (
           <ul className="projectList">
@@ -74,8 +87,7 @@ const ProjectList = () => {
         ) : (
           <div className="noProjects">No projects found.</div>
         )}
-      </div>
-    </>
+    </div>
   );
 };
 

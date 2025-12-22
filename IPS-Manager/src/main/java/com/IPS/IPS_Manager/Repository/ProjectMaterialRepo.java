@@ -9,7 +9,10 @@ import java.util.Optional;
 public interface ProjectMaterialRepo extends JpaRepository<ProjectMaterial, Long> {
     List<ProjectMaterial> findByProject_Id(Long projectId);
 
-    Optional<ProjectMaterial> findByProjectIdAndMaterialId(Long projectId, String materialId);
+    Optional<ProjectMaterial> findByProject_IdAndMaterial_Id(Long projectId, String materialId);
 
-    List<ProjectMaterial> findByProjectId(Long projectId);
+    // convenience alias if you want the old naming too:
+    default Optional<ProjectMaterial> findByProjectIdAndMaterialId(Long projectId, String materialId) {
+        return findByProject_IdAndMaterial_Id(projectId, materialId);
+    }
 }

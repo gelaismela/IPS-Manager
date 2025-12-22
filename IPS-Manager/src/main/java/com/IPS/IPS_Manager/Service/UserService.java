@@ -91,4 +91,7 @@ public class UserService {
                 .toList();
     }
 
+    public Optional<Users> findByEmail(String name) {
+        return repo.findByMail(name);
+    }
 }

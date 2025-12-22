@@ -1,37 +1,38 @@
 import { useEffect, useState } from "react";
 import {
   getProjects,
-  getAllPendingRequests,
+  getAllMaterialRequests,
   addMaterialToProject,
   removeMaterialFromProject,
   updateProjectMaterial,
   updateDeliveryStatus,
   getAllDeliveries,
   getAllMaterials,
+  getUsers,
+  assignProjectManager,
+  getMyProjects,
 } from "../api/api";
 import "../styles/adminPage.css";
 import ExcelUpload from "./ExcelUpload";
+import { useTranslation } from "../hooks/useTranslation";
 
 const ALLOWED_STATUSES = ["PENDING", "PARTIALLY_ASSIGNED", "ASSIGNED", "SENT"];
 
-const statusLabels = {
-  PENDING: "Pending",
-  PARTIALLY_ASSIGNED: "Partially Assigned",
-  ASSIGNED: "Assigned",
-  SENT: "Sent",
-};
-
 const AdminPage = () => {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [requests, setRequests] = useState([]);
   const [allMaterials, setAllMaterials] = useState([]); // Available materials from DB
+  const [projectManagers, setProjectManagers] = useState([]); // Users with project_manager role
   const [loading, setLoading] = useState(true);
   const [editingProject, setEditingProject] = useState(null);
+  const [assigningManager, setAssigningManager] = useState(null); // Project being assigned a manager
   const [collapsedDeliveryProjects, setCollapsedDeliveryProjects] = useState(
     {}
   );
   const [collapsedRequestProjects, setCollapsedRequestProjects] = useState({});
+  const [expandedStatusGroups, setExpandedStatusGroups] = useState({}); // Track expanded status groups
   const [newMaterial, setNewMaterial] = useState({
     id: null,
     name: "",
@@ -45,12 +46,48 @@ const AdminPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const projectsData = await getProjects();
+        // Get user role from localStorage
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const userRole = user?.role?.toLowerCase();
+
+        console.log("🔍 DEBUG - User from localStorage:", user);
+        console.log("🔍 DEBUG - User role:", userRole);
+
+        // Fetch projects based on role
+        let projectsData;
+        if (
+          userRole === "project_manager" ||
+          userRole === "project manager" ||
+          userRole === "projectmanager"
+        ) {
+          console.log("✅ Calling getMyProjects() for project_manager");
+          // Project managers only see their assigned projects
+          projectsData = await getMyProjects();
+        } else {
+          console.log("✅ Calling getProjects() for admin/dev");
+          // Admins (dev) see all projects
+          projectsData = await getProjects();
+        }
+        console.log("📦 Projects received:", projectsData);
         setProjects(projectsData);
 
         // Fetch all available materials for autocomplete
         const materialsData = await getAllMaterials();
         setAllMaterials(materialsData || []);
+
+        // Fetch all users to get project managers
+        try {
+          const usersData = await getUsers();
+          // Filter only project managers (or keep all users if you want flexibility)
+          const managers = usersData.filter(
+            (u) => u.role === "project_manager" || u.role === "dev"
+          );
+          setProjectManagers(managers || []);
+        } catch (userErr) {
+          console.warn("Could not fetch users:", userErr);
+          setProjectManagers([]);
+        }
 
         // Try to fetch deliveries, but handle 403 gracefully
         try {
@@ -65,7 +102,7 @@ const AdminPage = () => {
           setDeliveries([]);
         }
 
-        const requestsData = await getAllPendingRequests();
+        const requestsData = await getAllMaterialRequests();
         setRequests(requestsData);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -239,6 +276,27 @@ const AdminPage = () => {
     }
   };
 
+  const handleAssignManager = async (projectId, managerId) => {
+    if (!managerId) {
+      alert("Please select a project manager");
+      return;
+    }
+
+    try {
+      await assignProjectManager(projectId, managerId);
+
+      // Refresh projects list
+      const projectsData = await getProjects();
+      setProjects(projectsData);
+
+      setAssigningManager(null);
+      alert("Project manager assigned successfully!");
+    } catch (err) {
+      console.error("Failed to assign project manager:", err);
+      alert("Failed to assign manager: " + (err.message || "Unknown error"));
+    }
+  };
+
   const handleDeliveryStatusUpdate = async (deliveryId, newStatus) => {
     if (!ALLOWED_STATUSES.includes(newStatus)) {
       alert(`Invalid status: ${newStatus}`);
@@ -275,18 +333,39 @@ const AdminPage = () => {
     }));
   };
 
-  if (loading) return <div className="loading">Loading admin dashboard...</div>;
+  const toggleStatusGroup = (projectId, status) => {
+    const key = `${projectId}-${status}`;
+    setExpandedStatusGroups((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  if (loading) return <div className="loading">{t('admin.loading')}</div>;
+
+  // Get user role
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = user?.role === "dev";
+
+  const statusLabels = {
+    PENDING: t('status.pending'),
+    PARTIALLY_ASSIGNED: t('status.partiallyAssigned'),
+    ASSIGNED: t('status.assigned'),
+    SENT: t('status.sent'),
+  };
 
   return (
     <div className="admin-container">
-      <h1>Admin Dashboard</h1>
+      <h1>{isAdmin ? t('admin.title') : t('admin.projects')}</h1>
 
       <section className="projects-section">
         <h2>
-          <span>🏢</span>Current Projects
+          <span>🏢</span>{t('admin.projects')}
         </h2>
         <input
           type="text"
+          placeholder={t('common.search')}
           placeholder="Search by name or Project Code"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -299,6 +378,12 @@ const AdminPage = () => {
               <p>
                 <strong>Project Code:</strong> {project.projectCode}
               </p>
+              <p>
+                <strong>Project Manager:</strong>{" "}
+                {project.projectManager?.name || (
+                  <span style={{ color: "#dc3545" }}>Not Assigned</span>
+                )}
+              </p>
               <div className="materials-list">
                 <h4>Materials:</h4>
                 <ul>
@@ -309,12 +394,23 @@ const AdminPage = () => {
                   ))}
                 </ul>
               </div>
-              <button
-                onClick={() => setEditingProject(project)}
-                className="edit-btn"
-              >
-                Edit Project
-              </button>
+              <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+                <button
+                  onClick={() => setEditingProject(project)}
+                  className="edit-btn"
+                >
+                  Edit Materials
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => setAssigningManager(project)}
+                    className="edit-btn"
+                    style={{ background: "#28a745" }}
+                  >
+                    Assign Manager
+                  </button>
+                )}
+              </div>
             </div>
           ))}
           {filteredProjects.length === 0 && <p>No projects found.</p>}
@@ -443,6 +539,68 @@ const AdminPage = () => {
         </div>
       )}
 
+      {/* Assign Project Manager Modal */}
+      {assigningManager && (
+        <div className="edit-modal">
+          <div className="modal-content" style={{ maxWidth: "500px" }}>
+            <h2>Assign Project Manager</h2>
+            <p>
+              <strong>Project:</strong> {assigningManager.name}
+            </p>
+            <p>
+              <strong>Current Manager:</strong>{" "}
+              {assigningManager.projectManager?.name || "None"}
+            </p>
+
+            <div style={{ marginTop: "20px" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontWeight: "600",
+                }}
+              >
+                Select Project Manager:
+              </label>
+              <select
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #ddd",
+                  fontSize: "1em",
+                }}
+                defaultValue={assigningManager.projectManager?.id || ""}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleAssignManager(
+                      assigningManager.id,
+                      parseInt(e.target.value)
+                    );
+                  }
+                }}
+              >
+                <option value="">-- Select Manager --</option>
+                {projectManagers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.name} ({manager.mail})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="modal-actions" style={{ marginTop: "20px" }}>
+              <button
+                onClick={() => setAssigningManager(null)}
+                className="cancel-btn"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Deliveries section - Grouped by Project */}
       <section className="deliveries-section">
         <h2>📦 Delivery Status by Project</h2>
@@ -521,39 +679,6 @@ const AdminPage = () => {
             return (
               <div className="project-deliveries-container">
                 {Object.entries(grouped).map(([projectKey, projectData]) => {
-                  // Further group materials within each project
-                  const materialGroups = projectData.deliveries.reduce(
-                    (matAcc, delivery) => {
-                      const material = delivery.materialRequest?.material;
-                      const matId = material?.id || `delivery-${delivery.id}`;
-                      const matName = material?.name || "Unknown Material";
-
-                      if (!matAcc[matId]) {
-                        matAcc[matId] = {
-                          materialName: matName,
-                          deliveries: [],
-                        };
-                      }
-                      matAcc[matId].deliveries.push(delivery);
-                      return matAcc;
-                    },
-                    {}
-                  );
-
-                  // Sort deliveries within each material group by status and date
-                  Object.values(materialGroups).forEach((group) => {
-                    group.deliveries.sort((a, b) => {
-                      const statusOrder = { ASSIGNED: 1, SENT: 2, PENDING: 3 };
-                      const statusDiff =
-                        (statusOrder[a.status] || 999) -
-                        (statusOrder[b.status] || 999);
-                      if (statusDiff !== 0) return statusDiff;
-                      const dateA = new Date(a.deliveryDate || 0);
-                      const dateB = new Date(b.deliveryDate || 0);
-                      return dateB - dateA;
-                    });
-                  });
-
                   const isCollapsed =
                     collapsedDeliveryProjects[projectData.projectId];
 
@@ -658,94 +783,119 @@ const AdminPage = () => {
 
                       {!isCollapsed && (
                         <div className="materials-delivery-list">
-                          {Object.entries(materialGroups).map(
-                            ([matId, matData]) => (
+                          {/* Group deliveries by status only */}
+                          {ALLOWED_STATUSES.map((status) => {
+                            const statusDeliveries = projectData.deliveries.filter(
+                              (d) => d.status === status
+                            );
+
+                            if (statusDeliveries.length === 0) return null;
+
+                            const statusKey = `${projectData.projectId}-${status}`;
+                            const isExpanded = expandedStatusGroups[statusKey];
+                            const displayLimit = 3;
+                            const hasMore = statusDeliveries.length > displayLimit;
+                            const deliveriesToShow = isExpanded || !hasMore
+                              ? statusDeliveries
+                              : statusDeliveries.slice(0, displayLimit);
+
+                            return (
                               <div
-                                key={`${projectData.projectId}-material-${matId}`}
-                                className="material-delivery-section"
+                                key={statusKey}
+                                className="status-group-section"
                               >
-                                <div className="material-header">
-                                  <span className="material-icon">📦</span>
-                                  <strong>{matData.materialName}</strong>
-                                  <span className="delivery-sub-count">
-                                    {matData.deliveries.length}{" "}
-                                    {matData.deliveries.length === 1
-                                      ? "delivery"
-                                      : "deliveries"}
+                                <div className="status-group-header">
+                                  <span className={`status-badge ${status}`}>
+                                    {statusLabels[status]} ({statusDeliveries.length})
                                   </span>
                                 </div>
 
                                 <div className="delivery-cards-grid">
-                                  {matData.deliveries.map((delivery) => (
-                                    <div
-                                      key={delivery.id}
-                                      className="delivery-card-admin"
-                                    >
-                                      <div className="delivery-card-header">
-                                        <span className="delivery-id">
-                                          Delivery #{delivery.id}
-                                        </span>
-                                        <span
-                                          className={`status-badge ${delivery.status}`}
-                                        >
-                                          {statusLabels[delivery.status] ||
-                                            delivery.status}
-                                        </span>
+                                  {deliveriesToShow.map((delivery) => {
+                                    const material = delivery.materialRequest?.material;
+                                    const materialName = material?.name || "Unknown Material";
+
+                                    return (
+                                      <div
+                                        key={delivery.id}
+                                        className="delivery-card-admin"
+                                      >
+                                        <div className="delivery-card-header">
+                                          <span className="delivery-id">
+                                            Delivery #{delivery.id}
+                                          </span>
+                                          <span className={`status-badge ${delivery.status}`}>
+                                            {statusLabels[delivery.status] || delivery.status}
+                                          </span>
+                                        </div>
+                                        <div className="delivery-card-body">
+                                          <div className="info-row">
+                                            <span className="label">Material:</span>
+                                            <span className="value">{materialName}</span>
+                                          </div>
+                                          <div className="info-row">
+                                            <span className="label">Driver:</span>
+                                            <span className="value">
+                                              {delivery.driver?.name ||
+                                                delivery.assignedDriver?.name ||
+                                                "Not assigned"}
+                                            </span>
+                                          </div>
+                                          <div className="info-row">
+                                            <span className="label">Quantity:</span>
+                                            <span className="value">
+                                              {delivery.assignedQuantity || 0} units
+                                            </span>
+                                          </div>
+                                          <div className="info-row">
+                                            <span className="label">Delivery Date:</span>
+                                            <span className="value">
+                                              {formatDate(delivery.deliveryDate)}
+                                            </span>
+                                          </div>
+                                          <div className="info-row">
+                                            <span className="label">Assigned At:</span>
+                                            <span className="value">
+                                              {formatDate(delivery.assignedAt)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        {delivery.status === "ASSIGNED" && (
+                                          <button
+                                            onClick={() =>
+                                              handleDeliveryStatusUpdate(delivery.id, "SENT")
+                                            }
+                                            className="mark-sent-btn"
+                                          >
+                                            ✓ Mark as Sent
+                                          </button>
+                                        )}
                                       </div>
-                                      <div className="delivery-card-body">
-                                        <div className="info-row">
-                                          <span className="label">Driver:</span>
-                                          <span className="value">
-                                            {delivery.driver?.name ||
-                                              delivery.assignedDriver?.name ||
-                                              "Not assigned"}
-                                          </span>
-                                        </div>
-                                        <div className="info-row">
-                                          <span className="label">
-                                            Quantity:
-                                          </span>
-                                          <span className="value">
-                                            {delivery.assignedQuantity || 0}{" "}
-                                            units
-                                          </span>
-                                        </div>
-                                        <div className="info-row">
-                                          <span className="label">
-                                            Delivery Date:
-                                          </span>
-                                          <span className="value">
-                                            {formatDate(delivery.deliveryDate)}
-                                          </span>
-                                        </div>
-                                        <div className="info-row">
-                                          <span className="label">
-                                            Assigned At:
-                                          </span>
-                                          <span className="value">
-                                            {formatDate(delivery.assignedAt)}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      {delivery.status === "ASSIGNED" && (
-                                        <button
-                                          onClick={() =>
-                                            handleDeliveryStatusUpdate(
-                                              delivery.id,
-                                              "SENT"
-                                            )
-                                          }
-                                          className="mark-sent-btn"
-                                        >
-                                          ✓ Mark as Sent
-                                        </button>
-                                      )}
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
+
+                                {hasMore && (
+                                  <button
+                                    onClick={() => toggleStatusGroup(projectData.projectId, status)}
+                                    className="show-more-btn"
+                                  >
+                                    {isExpanded ? (
+                                      <>
+                                        <span>Show Less</span>
+                                        <span>▲</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span>Show {statusDeliveries.length - displayLimit} More</span>
+                                        <span>▼</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               </div>
-                            )
-                          )}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -765,8 +915,13 @@ const AdminPage = () => {
           <p className="empty-state">No pending requests</p>
         ) : (
           (() => {
-            // Group requests by project
-            const groupedRequests = requests.reduce((acc, request) => {
+            // Debug: Log first request to see structure
+            if (requests.length > 0) {
+              console.log("First request structure:", requests[0]);
+            }
+
+            // Group and aggregate materials by project
+            const groupedMaterials = requests.reduce((acc, request) => {
               const projectId = request.project?.id;
               if (!projectId) return acc;
 
@@ -782,19 +937,42 @@ const AdminPage = () => {
                   projectId,
                   projectName,
                   projectCode,
-                  requests: [],
+                  materials: {},
                 };
               }
-              acc[projectKey].requests.push(request);
+
+              // Aggregate material quantities
+              const material = request.material;
+              const quantity =
+                request.quantity || request.requestedQuantity || 0;
+
+              console.log(
+                `Processing request: material=${material?.name}, quantity=${quantity}`
+              );
+
+              if (material) {
+                const matKey = material.id;
+                if (!acc[projectKey].materials[matKey]) {
+                  acc[projectKey].materials[matKey] = {
+                    id: material.id,
+                    name: material.name,
+                    unit: material.unit,
+                    totalQuantity: 0,
+                  };
+                }
+                acc[projectKey].materials[matKey].totalQuantity += quantity;
+              }
+
               return acc;
             }, {});
 
             return (
               <div className="project-requests-container">
-                {Object.entries(groupedRequests).map(
+                {Object.entries(groupedMaterials).map(
                   ([projectKey, projectData]) => {
                     const isCollapsed =
                       collapsedRequestProjects[projectData.projectId];
+                    const materialsArray = Object.values(projectData.materials);
 
                     return (
                       <div key={projectKey} className="project-request-group">
@@ -820,32 +998,35 @@ const AdminPage = () => {
                             </span>
                           </h3>
                           <span className="delivery-count-badge">
-                            {projectData.requests.length}{" "}
-                            {projectData.requests.length === 1
-                              ? "request"
-                              : "requests"}
+                            {materialsArray.length}{" "}
+                            {materialsArray.length === 1
+                              ? "material"
+                              : "materials"}
                           </span>
                         </div>
 
                         {!isCollapsed && (
-                          <div className="requests-grid">
-                            {projectData.requests.map((request) => (
-                              <div key={request.id} className="request-card">
-                                <h3>Request #{request.id}</h3>
-                                <div className="request-materials">
-                                  <h4>Materials Requested:</h4>
-                                  <ul>
-                                    {(request.materials || []).map(
-                                      (mat, idx) => (
-                                        <li key={idx}>
-                                          {mat.quantity}x {mat.name}
-                                        </li>
-                                      )
-                                    )}
-                                  </ul>
-                                </div>
-                              </div>
-                            ))}
+                          <div className="request-table-container">
+                            <table className="material-table">
+                              <thead>
+                                <tr>
+                                  <th style={{ textAlign: "left" }}>
+                                    Material Name
+                                  </th>
+                                  <th style={{ width: "100px" }}>Quantity</th>
+                                  <th style={{ width: "100px" }}>Unit</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {materialsArray.map((mat) => (
+                                  <tr key={mat.id}>
+                                    <td>{mat.name}</td>
+                                    <td>{mat.totalQuantity}</td>
+                                    <td>{mat.unit || "N/A"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         )}
                       </div>
@@ -858,12 +1039,14 @@ const AdminPage = () => {
         )}
       </section>
 
-      <section className="upload-section">
-        <h2>
-          <span>📤</span>Upload Excel File
-        </h2>
-        <ExcelUpload />
-      </section>
+      {isAdmin && (
+        <section className="upload-section">
+          <h2>
+            <span>📤</span>Upload Excel File
+          </h2>
+          <ExcelUpload />
+        </section>
+      )}
     </div>
   );
 };

@@ -1,0 +1,56 @@
+{
+  "admin": {
+    "title": "Admin Dashboard",
+    "projects": "Projects",
+    "deliveryStatus": "Delivery Status by Project",
+    "materialRequests": "Pending Delivery Requests",
+    "uploadExcel": "Upload Excel File",
+    "totalDeliveries": "Total deliveries",
+    "sortedByStatus": "(Sorted by status and date)",
+    "noDeliveries": "No deliveries available. This may be due to backend permissions.",
+    "noPendingRequests": "No pending requests",
+    "loading": "Loading admin dashboard...",
+    "totalDeliveries": "total",
+    "assigned": "assigned",
+    "sent": "sent",
+    "pending": "pending",
+    "materials": "materials",
+    "material": "material",
+    "delivery": "delivery",
+    "deliveries": "deliveries",
+    "showMore": "Show",
+    "more": "More",
+    "showLess": "Show Less",
+    "markAsSent": "Mark as Sent"
+  },
+  "delivery": {
+    "deliveryId": "Delivery",
+    "material": "Material",
+    "driver": "Driver",
+    "quantity": "Quantity",
+    "deliveryDate": "Delivery Date",
+    "assignedAt": "Assigned At",
+    "notAssigned": "Not assigned",
+    "units": "units"
+  },
+  "project": {
+    "projectCode": "Project Code",
+    "address": "Address",
+    "assignManager": "Assign Manager"
+  },
+  "status": {
+    "pending": "Pending",
+    "partiallyAssigned": "Partially Assigned",
+    "assigned": "Assigned",
+    "sent": "Sent"
+  },
+  "common": {
+    "search": "Search",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "close": "Close"
+  }
+}

@@ -75,11 +75,22 @@ export async function login(email, password) {
   if (!res.ok) throw new Error("Login failed");
   const data = await res.json();
 
-  // Store token and role for easy access
+  // Store token, role, id, and email for easy access
   if (data.token) {
     localStorage.setItem("token", data.token);
     if (data.role) {
-      localStorage.setItem("user", JSON.stringify({ role: data.role, email }));
+      localStorage.setItem("role", data.role); // Store role separately for ProtectedRoute
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          role: data.role,
+          email,
+          id: data.id,
+        })
+      );
+    }
+    if (data.id) {
+      localStorage.setItem("userId", data.id);
     }
   }
 
@@ -100,7 +111,7 @@ export async function getCurrentUser(email) {
 export function logout() {
   localStorage.clear();
   sessionStorage.clear();
-  window.location.href = "/login";
+  window.location.href = "/";
 }
 
 export async function forgotPassword(email) {
@@ -199,6 +210,17 @@ export async function updateProjectMaterial(projectId, materialId, quantity) {
   });
 }
 
+export async function assignProjectManager(projectId, projectManagerId) {
+  return authFetch(`/projects/${projectId}/assign-manager`, {
+    method: "PUT",
+    body: JSON.stringify({ projectManagerId }),
+  });
+}
+
+export async function getMyProjects() {
+  return authFetch("/projects/my-projects", { method: "GET" });
+}
+
 // MATERIALS -----------------------------------
 
 export async function getAllMaterials() {
@@ -278,6 +300,13 @@ export async function getMaterialRequestById(id) {
 
 export async function getAllPendingRequests() {
   return authFetch("/material-requests/pending", {
+    method: "GET",
+  });
+}
+
+// Get material requests for project manager's projects only
+export async function getMyProjectRequests() {
+  return authFetch("/material-requests/my-project-requests", {
     method: "GET",
   });
 }

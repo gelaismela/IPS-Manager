@@ -17,11 +17,11 @@ export default function DriverRedirect() {
           localStorage.getItem("userId") || sessionStorage.getItem("userId");
 
         if (storedUserId) {
-          navigate(`/driver-deliveries/${storedUserId}`);
+          navigate("/driver-deliveries");
           return;
         }
 
-        // Get email from stored user info
+        // Get user info from stored user object (includes id now)
         const userStr =
           localStorage.getItem("user") || sessionStorage.getItem("user");
         if (!userStr) {
@@ -29,26 +29,32 @@ export default function DriverRedirect() {
           return;
         }
 
-        const { email } = JSON.parse(userStr);
-        if (!email) {
-          navigate("/projects");
-          return;
-        }
-
-        // Fetch user info from backend using email
-        const userInfo = await getCurrentUser(email);
-
-        if (userInfo && userInfo.id) {
-          // Store for future use
+        const user = JSON.parse(userStr);
+        if (user.id) {
+          // User ID is already in the stored user object
           const storage = localStorage.getItem("token")
             ? localStorage
             : sessionStorage;
-          storage.setItem("userId", userInfo.id);
+          storage.setItem("userId", user.id);
+          navigate("/driver-deliveries");
+          return;
+        }
 
-          navigate(`/driver-deliveries/${userInfo.id}`);
+        // Fallback: fetch from backend if id not in stored user
+        if (user.email) {
+          const userInfo = await getCurrentUser(user.email);
+          if (userInfo && userInfo.id) {
+            const storage = localStorage.getItem("token")
+              ? localStorage
+              : sessionStorage;
+            storage.setItem("userId", userInfo.id);
+            navigate("/driver-deliveries");
+          } else {
+            // Fallback if no user ID found
+            console.error("No user ID found");
+            navigate("/projects");
+          }
         } else {
-          // Fallback if no user ID found
-          console.error("No user ID found");
           navigate("/projects");
         }
       } catch (error) {

@@ -18,6 +18,10 @@ body {
   line-height: 1.6;
 }
 
+[data-theme="dark"] body {
+  background: #0f1419;
+}
+
 .login-container {
   width: 100%;
   max-width: 400px;
@@ -30,6 +34,11 @@ body {
   padding: 32px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .login-card {
+  background: #1a1f2e;
+  border-color: #2d3748;
 }
 
 .login-card:hover {
@@ -48,10 +57,18 @@ body {
   margin-bottom: 8px;
 }
 
+[data-theme="dark"] .login-header h2 {
+  color: #e8eaed;
+}
+
 .login-header p {
   color: #718096;
   font-size: 14px;
   font-weight: 400;
+}
+
+[data-theme="dark"] .login-header p {
+  color: #9aa0a6;
 }
 
 /* Form Group & Input Styles */
@@ -79,6 +96,12 @@ body {
   outline: none;
 }
 
+[data-theme="dark"] .input-wrapper input {
+  background: #212633;
+  border-color: #2d3748;
+  color: #e8eaed;
+}
+
 .input-wrapper input:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -103,6 +126,11 @@ body {
   transform-origin: left top;
   background: #ffffff;
   padding: 0 4px;
+}
+
+[data-theme="dark"] .input-wrapper label {
+  color: #9aa0a6;
+  background: #1a1f2e;
 }
 
 /* Password Toggle */

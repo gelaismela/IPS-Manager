@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getMaterialsByProject, createMaterialRequest } from "../api/api";
 import "../styles/project.css";
-import Navbar from "./Navbar";
 
 const Project = () => {
   const { id } = useParams();
@@ -63,9 +62,7 @@ const Project = () => {
   if (!projectInfo) return <div>Project not found</div>;
 
   return (
-    <>
-      <Navbar />
-      <div className="project-material-main">
+    <div className="project-material-main">
         <h2>{projectInfo.name}</h2>
         <p>
           <strong>Project Code:</strong> {projectInfo.projectCode}
@@ -138,8 +135,7 @@ const Project = () => {
             Submit Requests
           </button>
         </form>
-      </div>
-    </>
+    </div>
   );
 };
 

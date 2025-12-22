@@ -1,0 +1,61 @@
+.App {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Cards and containers */
+.card,
+.container,
+.content-wrapper {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* Inputs */
+input,
+textarea,
+select {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Tables */
+table {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+th {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+td {
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Buttons */
+button {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* Links */
+a {
+  color: var(--text-primary);
+}

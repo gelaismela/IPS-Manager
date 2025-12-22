@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getAllMaterialRequests } from "../api/api";
+import { getAllMaterialRequests, getMyProjectRequests } from "../api/api";
 import { useDeliveryNotifications } from "./useDeliveryNotifications";
 
 /**
@@ -7,6 +7,7 @@ import { useDeliveryNotifications } from "./useDeliveryNotifications";
  * We mark items as unread if their (id,status) pair hasn't been seen before.
  * Stores seen keys in localStorage under `MR_SEEN_KEYS`.
  * Also triggers browser push notifications for status changes.
+ * For project managers, only shows requests for their assigned projects.
  */
 export function useMaterialRequestNotifications({ pollMs = 30000 } = {}) {
   const [requests, setRequests] = useState([]);
@@ -42,13 +43,37 @@ export function useMaterialRequestNotifications({ pollMs = 30000 } = {}) {
 
     const tick = async () => {
       try {
-        const data = await getAllMaterialRequests();
+        // Get user role from localStorage
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const userRole = user?.role?.toLowerCase();
+
+        console.log("🔍 Material Requests - User:", user);
+        console.log("🔍 Material Requests - Role:", userRole);
+
+        // Fetch requests based on role
+        let data;
+        if (
+          userRole === "project_manager" ||
+          userRole === "project manager" ||
+          userRole === "projectmanager"
+        ) {
+          console.log("✅ Fetching MY project requests only (project_manager)");
+          data = await getMyProjectRequests();
+          console.log("📦 My project requests received:", data);
+        } else {
+          console.log("✅ Fetching ALL requests (admin/dev)");
+          data = await getAllMaterialRequests();
+          console.log("📦 All requests received:", data);
+        }
+
         if (!stop) {
           setRequests(Array.isArray(data) ? data : []);
           setError(null);
           setLoading(false);
         }
       } catch (e) {
+        console.error("❌ Error fetching material requests:", e);
         if (!stop) {
           setError("Failed to load requests");
           setLoading(false);

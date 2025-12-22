@@ -7,14 +7,26 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
 }
 
+[data-theme="dark"] .project-material-main {
+  background: #1a1f2e;
+}
+
 .project-material-main h2 {
   margin-bottom: 8px;
   color: #333;
 }
 
+[data-theme="dark"] .project-material-main h2 {
+  color: #e8eaed;
+}
+
 .project-material-main p {
   margin: 4px 0 12px 0;
   color: #555;
+}
+
+[data-theme="dark"] .project-material-main p {
+  color: #9aa0a6;
 }
 
 .material-table {
@@ -24,11 +36,22 @@
   margin-top: 16px;
 }
 
+[data-theme="dark"] .material-table {
+  background: #212633;
+}
+
 .material-table th,
 .material-table td {
   border: 1px solid #ddd;
   padding: 10px;
   text-align: left;
+  color: #1a202c;
+}
+
+[data-theme="dark"] .material-table th,
+[data-theme="dark"] .material-table td {
+  border-color: #2d3748;
+  color: #e8eaed;
 }
 
 .material-table th {
@@ -36,6 +59,15 @@
   color: #222;
 }
 
+[data-theme="dark"] .material-table th {
+  background: #2d3748;
+  color: #e8eaed;
+}
+
 .material-table tr:nth-child(even) {
   background: #f6f6f6;
+}
+
+[data-theme="dark"] .material-table tr:nth-child(even) {
+  background: #1a1f2e;
 }

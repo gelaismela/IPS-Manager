@@ -5,6 +5,7 @@ import {
   Navigate,
   useParams,
 } from "react-router-dom";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import Registration from "./components/Registration";
 import AdminPage from "./components/AdminPage";
 import DeliveryList from "./components/DiliveryList";
@@ -30,47 +31,67 @@ function UserPageWrapper() {
 
 function App() {
   return (
-    <div className="App">
-      <Router>
+    <ThemeProvider>
+      <div className="App">
+        <Router>
         <Routes>
           <Route path="/" element={<Registration />} />
           <Route
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={["admin", "dev"]}>
-                <AdminPage />
+                <>
+                  <Navbar />
+                  <AdminPage />
+                </>
               </ProtectedRoute>
             }
           />
           <Route
             path="/projects"
             element={
-              <ProtectedRoute allowedRoles={["project_manager", "dev"]}>
-                <ProjectList />
+              <ProtectedRoute
+                allowedRoles={["project_manager", "dev", "head_of_driver"]}
+              >
+                <>
+                  <Navbar />
+                  <ProjectList />
+                </>
               </ProtectedRoute>
             }
           />
           <Route
             path="/project/:id"
             element={
-              <ProtectedRoute allowedRoles={["project_manager", "dev"]}>
-                <Project />
+              <ProtectedRoute
+                allowedRoles={["project_manager", "dev", "head_of_driver"]}
+              >
+                <>
+                  <Navbar />
+                  <Project />
+                </>
               </ProtectedRoute>
             }
           />
           <Route
             path="/delivery/:id"
             element={
-              <ProtectedRoute allowedRoles={["driver", "dev"]}>
-                <Delivery />
+              <ProtectedRoute allowedRoles={["dev", "head_of_drivers"]}>
+                <>
+                  <Navbar />
+                  <Delivery />
+                </>
               </ProtectedRoute>
             }
           />
           <Route
             path="/deliveryRequests"
             element={
-              <ProtectedRoute allowedRoles={["driver", "dev"]}>
-                <DeliveryList />
+              <ProtectedRoute allowedRoles={["head_of_drivers", "dev"]}>
+                <>
+                  <Navbar />
+                  <DeliveryList />
+                </>
               </ProtectedRoute>
             }
           />
@@ -78,15 +99,21 @@ function App() {
             path="/driver"
             element={
               <ProtectedRoute allowedRoles={["driver", "dev"]}>
-                <DriverRedirect />
+                <>
+                  <Navbar />
+                  <DriverRedirect />
+                </>
               </ProtectedRoute>
             }
           />
           <Route
-            path="/driver-deliveries/:id"
+            path="/driver-deliveries"
             element={
               <ProtectedRoute allowedRoles={["driver", "dev"]}>
-                <Deliveries />
+                <>
+                  <Navbar />
+                  <Deliveries />
+                </>
               </ProtectedRoute>
             }
           />
@@ -114,7 +141,8 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </Router>
-    </div>
+      </div>
+    </ThemeProvider>
   );
 }
 

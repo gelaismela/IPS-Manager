@@ -15,4 +15,10 @@ public interface MaterialRequestRepo extends JpaRepository<MaterialRequest, Long
 
     List<MaterialRequest> findByProject_Id(Long projectId);
 
+    // ✅ NEW - Find all requests created by a specific user
+    List<MaterialRequest> findByCreatedById(Long userId);
+
+    // ✅ NEW - Find all requests for projects managed by a specific project manager
+    List<MaterialRequest> findByProject_ProjectManager_Id(Long projectManagerId);
+
 }

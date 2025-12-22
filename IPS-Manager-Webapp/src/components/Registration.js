@@ -71,28 +71,17 @@ function Login() {
 
       // Redirect after short delay
       setTimeout(async () => {
-        // Special handling for drivers - need to get their user ID
+        // Route based on role
         if (role === "driver") {
-          try {
-            const { getCurrentUser } = await import("../api/api");
-            const userInfo = await getCurrentUser(email);
-            if (userInfo && userInfo.id) {
-              // Store user ID for future use
-              if (remember) {
-                localStorage.setItem("userId", userInfo.id);
-              } else {
-                sessionStorage.setItem("userId", userInfo.id);
-              }
-              navigate(`/driver-deliveries/${userInfo.id}`);
-            } else {
-              navigate("/projects"); // Fallback
-            }
-          } catch (err) {
-            console.error("Failed to get user info:", err);
-            navigate("/projects"); // Fallback
-          }
+          navigate("/driver-deliveries");
+        } else if (role === "project_manager") {
+          navigate("/projects");
+        } else if (role === "head_driver") {
+          navigate("/deliveryRequests");
+        } else if (role === "dev" || role === "admin") {
+          navigate("/admin");
         } else {
-          navigate(`/${role}`);
+          navigate("/projects"); // Default fallback
         }
       }, 1500);
     } catch (err) {

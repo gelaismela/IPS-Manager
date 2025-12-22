@@ -207,32 +207,14 @@ const Delivery = () => {
       <h2>Assign Delivery for Project: {projectInfo?.name}</h2>
       <div className="delivery-info">
         <h3>Material Requests</h3>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "16px",
-            marginBottom: "24px",
-            padding: "16px",
-            background: "#f8f9fa",
-            borderRadius: "8px",
-          }}
-        >
+        <div className="project-info-grid">
           <div>
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-              Project Code
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "#333" }}>
-              {projectInfo?.projectCode}
-            </div>
+            <div className="info-label">Project Code</div>
+            <div className="info-value">{projectInfo?.projectCode}</div>
           </div>
           <div>
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-              Address
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
-              {projectInfo?.address}
-            </div>
+            <div className="info-label">Address</div>
+            <div className="info-value-address">{projectInfo?.address}</div>
           </div>
         </div>
         <table className="material-table">
@@ -256,68 +238,44 @@ const Delivery = () => {
               return (
                 <tr
                   key={index}
-                  style={{
-                    background: mat.selectedQuantity > 0 ? "#f0f8ff" : "#fff",
-                    opacity: canAssign ? 1 : 0.6,
-                    transition: "all 0.2s ease",
-                  }}
+                  className={`${
+                    mat.selectedQuantity > 0 ? "material-row-selected" : ""
+                  } ${!canAssign ? "material-row-disabled" : ""}`}
                 >
-                  <td
-                    style={{ fontWeight: 500, color: "#666" }}
-                    title={`Request IDs: ${requestIds}`}
-                  >
+                  <td className="request-id-cell" title={`Request IDs: ${requestIds}`}>
                     {requestCount > 1 ? (
-                      <span
-                        style={{
-                          background: "#007bff",
-                          color: "#fff",
-                          padding: "4px 8px",
-                          borderRadius: "12px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
+                      <span className="request-count-badge">
                         {requestCount} reqs
                       </span>
                     ) : (
                       `#${mat.requests[0].id}`
                     )}
                   </td>
-                  <td style={{ textAlign: "left", fontWeight: 500 }}>
+                  <td className="material-name-cell">
                     {mat.name}
                   </td>
-                  <td style={{ fontSize: 15 }}>{mat.requestedQuantity}</td>
-                  <td style={{ fontSize: 15, color: "#666" }}>
+                  <td>{mat.requestedQuantity}</td>
+                  <td className="request-id-cell">
                     {mat.assignedQuantity}
                   </td>
                   <td>
-                    <strong
-                      style={{
-                        color: canAssign ? "#28a745" : "#dc3545",
-                        fontSize: 16,
-                      }}
+                    <span
+                      className={`remaining-qty ${
+                        canAssign ? "available" : "unavailable"
+                      }`}
                     >
                       {mat.remainingQuantity}
-                    </strong>
+                    </span>
                   </td>
                   <td>
                     <span
-                      style={{
-                        display: "inline-block",
-                        padding: "6px 12px",
-                        borderRadius: 16,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
-                        background:
-                          mat.status === "DELIVERED"
-                            ? "#28a745"
-                            : mat.status === "ASSIGNED"
-                            ? "#007bff"
-                            : "#ffc107",
-                        color: "#fff",
-                      }}
+                      className={`status-badge ${
+                        mat.status === "DELIVERED"
+                          ? "delivered"
+                          : mat.status === "ASSIGNED"
+                          ? "assigned"
+                          : "pending"
+                      }`}
                     >
                       {mat.status}
                     </span>
@@ -331,32 +289,15 @@ const Delivery = () => {
                       onChange={(e) =>
                         handleMaterialSelection(index, e.target.value)
                       }
-                      style={{
-                        width: "100%",
-                        padding: "8px 12px",
-                        fontSize: 14,
-                        border:
-                          mat.selectedQuantity > 0
-                            ? "2px solid #007bff"
-                            : "1px solid #ddd",
-                        borderRadius: 6,
-                        outline: "none",
-                        transition: "all 0.2s ease",
-                        background: canAssign ? "#fff" : "#f5f5f5",
-                      }}
+                      className={`quantity-input-field ${
+                        mat.selectedQuantity > 0 ? "selected" : ""
+                      }`}
                       disabled={!canAssign}
                       placeholder={canAssign ? "0" : "—"}
                       onFocus={(e) => e.target.select()}
                     />
                     {mat.selectedQuantity > mat.remainingQuantity && (
-                      <div
-                        style={{
-                          color: "#dc3545",
-                          fontSize: 11,
-                          marginTop: 4,
-                          fontWeight: 500,
-                        }}
-                      >
+                      <div className="quantity-error">
                         ⚠️ Max: {mat.remainingQuantity}
                       </div>
                     )}

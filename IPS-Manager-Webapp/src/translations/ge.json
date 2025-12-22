@@ -1,0 +1,56 @@
+{
+  "admin": {
+    "title": "ადმინისტრატორის პანელი",
+    "projects": "პროექტები",
+    "deliveryStatus": "მიწოდების სტატუსი პროექტების მიხედვით",
+    "materialRequests": "მიწოდების მოლოდინში მყოფი მოთხოვნები",
+    "uploadExcel": "ატვირთეთ Excel ფაილი",
+    "totalDeliveries": "სულ მიწოდება",
+    "sortedByStatus": "(დალაგებულია სტატუსისა და თარიღის მიხედვით)",
+    "noDeliveries": "მიწოდება არ არის ხელმისაწვდომი. ეს შეიძლება გამოწვეული იყოს უფლებების პრობლემით.",
+    "noPendingRequests": "მოლოდინში მყოფი მოთხოვნები არ არის",
+    "loading": "იტვირთება ადმინისტრატორის პანელი...",
+    "totalDeliveries": "სულ",
+    "assigned": "მინიჭებული",
+    "sent": "გაგზავნილი",
+    "pending": "მოლოდინში",
+    "materials": "მასალები",
+    "material": "მასალა",
+    "delivery": "მიწოდება",
+    "deliveries": "მიწოდებები",
+    "showMore": "აჩვენე",
+    "more": "მეტი",
+    "showLess": "ნაკლების ჩვენება",
+    "markAsSent": "მონიშნე როგორც გაგზავნილი"
+  },
+  "delivery": {
+    "deliveryId": "მიწოდება",
+    "material": "მასალა",
+    "driver": "მძღოლი",
+    "quantity": "რაოდენობა",
+    "deliveryDate": "მიწოდების თარიღი",
+    "assignedAt": "მინიჭების თარიღი",
+    "notAssigned": "არ არის მინიჭებული",
+    "units": "ერთეული"
+  },
+  "project": {
+    "projectCode": "პროექტის კოდი",
+    "address": "მისამართი",
+    "assignManager": "მენეჯერის მინიჭება"
+  },
+  "status": {
+    "pending": "მოლოდინში",
+    "partiallyAssigned": "ნაწილობრივ მინიჭებული",
+    "assigned": "მინიჭებული",
+    "sent": "გაგზავნილი"
+  },
+  "common": {
+    "search": "ძიება",
+    "save": "შენახვა",
+    "cancel": "გაუქმება",
+    "edit": "რედაქტირება",
+    "delete": "წაშლა",
+    "add": "დამატება",
+    "close": "დახურვა"
+  }
+}

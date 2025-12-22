@@ -1,0 +1,9 @@
+.app-logo {
+  height: 40px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.app-logo:hover {
+  opacity: 0.8;
+}

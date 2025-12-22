@@ -1,50 +1,64 @@
 package com.IPS.IPS_Manager.Controller;
 
+import com.IPS.IPS_Manager.DTO.AddMaterialToProjectDTO;
+import com.IPS.IPS_Manager.DTO.AssignProjectManagerDTO;
 import com.IPS.IPS_Manager.DTO.ProjectWithMaterialsRequest;
-import com.IPS.IPS_Manager.Entity.Material;
-import com.IPS.IPS_Manager.Entity.MaterialRequest;
-import com.IPS.IPS_Manager.Entity.Project;
-import com.IPS.IPS_Manager.Entity.ProjectMaterial;
+import com.IPS.IPS_Manager.DTO.UpdateMaterialQuantityDTO;
+import com.IPS.IPS_Manager.Entity.*;
+import com.IPS.IPS_Manager.Repository.MaterialRepo;
+import com.IPS.IPS_Manager.Repository.ProjectMaterialRepo;
+import com.IPS.IPS_Manager.Repository.ProjectRepo;
+import com.IPS.IPS_Manager.Repository.UserRepo;
 import com.IPS.IPS_Manager.Service.ProjectMaterialService;
 import com.IPS.IPS_Manager.Service.ProjectService;
+import com.IPS.IPS_Manager.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.web.savedrequest.SavedCookie;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
+
 
 @RestController
 @RequestMapping("/projects")
 @PreAuthorize("hasRole('dev')")
-
 public class ProjectController {
 
     @Autowired
-    private ProjectService service;
+    private ProjectService projectService;
+
+    @Autowired
+    private UserRepo repo;
+
+    @Autowired
+    private ProjectRepo projectRepo;
 
     @Autowired
     private ProjectMaterialService projectMaterialService;
 
+
     @PostMapping("/add")
     public ResponseEntity<Project> createProject(@RequestBody Project project) {
-        Project saved = service.addProject(project);
+        Project saved = projectService.addProject(project);
         return ResponseEntity.ok(saved);
     }
 
     @PostMapping("/addAll")
-    public List<Project> createProjects(@RequestBody List<Project> projects){
-        return projects.stream().map(project-> createProject(project).getBody()).toList();
+    public ResponseEntity<List<Project>> createProjects(@RequestBody List<Project> projects){
+        List<Project> saved = projects.stream()
+                .map(projectService::addProject)
+                .toList();
+        return ResponseEntity.ok(saved);
     }
 
-    @GetMapping("/all")
-    public ResponseEntity<List<Project>> getProjects() {
-        return ResponseEntity.ok(service.getAllProjects());
-    }
 
-
+     @GetMapping("/all")
+     public ResponseEntity<List<Project>> getProjects() {
+         return ResponseEntity.ok(projectService.getAllProjects());
+     }
 
     @PostMapping("/with-materials")
     public ResponseEntity<Project> createProjectWithMaterials(
@@ -54,76 +68,93 @@ public class ProjectController {
         return ResponseEntity.ok(savedProject);
     }
 
-
     @GetMapping("/{projectId}/materials")
     public ResponseEntity<?> getMaterialsByProject(@PathVariable Long projectId) {
-        System.out.println("🔍 Incoming request for projectId: " + projectId);
-
         try {
             List<ProjectMaterial> materials = projectMaterialService.getMaterialsByProject(projectId);
-            System.out.println("✅ Found materials: " + materials.size());
             return ResponseEntity.ok(materials);
         } catch (Exception e) {
-            System.err.println("❌ Error while fetching materials: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 
-
-    @PutMapping("/{projectId}/materials/use")
-    public ResponseEntity<String> useMaterial(
+    // Add material to existing project
+    @PostMapping("/{projectId}/materials/add")
+    public ResponseEntity<?> addMaterialToProject(
             @PathVariable Long projectId,
-            @RequestBody Map<String, Object> payload) {
-
-        String materialId = (String) payload.get("materialId");
-        Integer used = (Integer) payload.get("used");
-
-        if (materialId == null || used == null) {
-            return ResponseEntity.badRequest().body("Missing materialId or used in request");
-        }
-
-        if (used < 0) {
-            return ResponseEntity.badRequest().body("Used quantity cannot be negative");
-        }
-
+            @RequestBody AddMaterialToProjectDTO dto) {
         try {
-            // Fetch ProjectMaterial by projectId and materialId
-            ProjectMaterial pm = projectMaterialService.getMaterialByProjectAndMaterial(projectId, materialId);
-            if (pm == null) {
-                System.out.println("❌ Material not found for projectId=" + projectId + " and materialId=" + materialId);
-                return ResponseEntity.badRequest().body("Material not found for this project");
-            }
-
-            // Check limit
-            if (pm.getQuantityUsed() + used > pm.getAssignedQuantity()) {
-                System.out.println("⚠️ Exceeding assigned quantity! Assigned=" + pm.getAssignedQuantity()
-                        + ", AlreadyUsed=" + pm.getQuantityUsed() + ", TryingToUse=" + used);
-                return ResponseEntity.badRequest().body("Cannot use more than assigned quantity");
-            }
-
-            // Update quantityUsed
-            pm.setQuantityUsed(pm.getQuantityUsed() + used);
-            projectMaterialService.save(pm);
-            System.out.println("✅ Updated quantityUsed for materialId=" + materialId + " in projectId=" + projectId
-                    + ". New quantityUsed=" + pm.getQuantityUsed());
-
-            // ALSO create MaterialRequest for head/driver
-            Project project = pm.getProject();
-            MaterialRequest request = projectMaterialService.createMaterialRequest(
-                    project.getId(),
-                    materialId,
-                    used
+            ProjectMaterial pm = projectService.addMaterialToProject(
+                    projectId,
+                    dto.getMaterialId(),
+                    dto.getQuantity()
             );
-            System.out.println("📩 MaterialRequest created with id=" + request.getId());
-
-            return ResponseEntity.ok("Quantity updated and material request created (id=" + request.getId() + ")");
-
+            return ResponseEntity.ok(pm);
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body("Error adding material: " + e.getMessage());
         }
     }
 
+    // Remove material from project
+    @DeleteMapping("/{projectId}/materials/{materialId}")
+    public ResponseEntity<?> removeMaterialFromProject(
+            @PathVariable Long projectId,
+            @PathVariable String materialId) {
+        try {
+            projectService.removeMaterialFromProject(projectId, materialId);
+            return ResponseEntity.ok("Material removed successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body("Error removing material: " + e.getMessage());
+        }
+    }
 
+    // Update material quantity in project
+    @PutMapping("/{projectId}/materials/{materialId}")
+    public ResponseEntity<?> updateProjectMaterialQuantity(
+            @PathVariable Long projectId,
+            @PathVariable String materialId,
+            @RequestBody UpdateMaterialQuantityDTO dto) {
+        try {
+            ProjectMaterial pm = projectService.updateMaterialQuantity(
+                    projectId,
+                    materialId,
+                    dto.getQuantity()
+            );
+            return ResponseEntity.ok(pm);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body("Error updating quantity: " + e.getMessage());
+        }
+    }
+
+    // Assign project manager to a project
+    @PutMapping("/{projectId}/assign-manager")
+    public ResponseEntity<?> assignProjectManager(
+            @PathVariable Long projectId,
+            @RequestBody AssignProjectManagerDTO dto) {
+        try {
+            Project project = projectService.assignProjectManager(projectId, dto.getProjectManagerId());
+            return ResponseEntity.ok(project);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body("Error assigning project manager: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/my-projects")
+    @PreAuthorize("hasRole('project_manager')")
+    public ResponseEntity<List<Project>> getMyProjects(Principal principal) {
+        // Get email from JWT token
+        String email = principal.getName();
+
+        // Find the user by email to get their ID
+        Users currentUser = repo.findByMail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Find projects where project_manager_id = currentUser.getId()
+        List<Project> projects = projectRepo.findByProjectManagerId(currentUser.getId());
+        return ResponseEntity.ok(projects);
+    }
 }

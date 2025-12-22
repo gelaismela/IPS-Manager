@@ -3,16 +3,15 @@ package com.IPS.IPS_Manager.Service;
 
 import com.IPS.IPS_Manager.DTO.CreateRequestDTO;
 import com.IPS.IPS_Manager.DTO.ProjectWithMaterialsRequest;
-import com.IPS.IPS_Manager.Entity.Material;
-import com.IPS.IPS_Manager.Entity.MaterialRequest;
-import com.IPS.IPS_Manager.Entity.Project;
-import com.IPS.IPS_Manager.Entity.ProjectMaterial;
+import com.IPS.IPS_Manager.Entity.*;
 import com.IPS.IPS_Manager.Repository.MaterialRepo;
 import com.IPS.IPS_Manager.Repository.ProjectMaterialRepo;
 import com.IPS.IPS_Manager.Repository.ProjectRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,10 +20,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProjectMaterialService {
 
-    private final ProjectRepo projectRepo;
-    private final ProjectMaterialRepo projectMaterialRepo;
-    private final MaterialRepo materialRepo;
-    private final MaterialRequestService materialRequestService;
+    @Autowired
+    private ProjectRepo projectRepo;
+
+    @Autowired
+    private ProjectMaterialRepo projectMaterialRepo;
+
+    @Autowired
+    private MaterialRepo materialRepo;
+
+    @Autowired
+    private MaterialRequestService materialRequestService;
 
     @Transactional
     public Project createProjectWithMaterials(Project project, List<ProjectMaterial> materials) {
@@ -62,8 +68,8 @@ public class ProjectMaterialService {
     }
 
     // ✅ Worker creates new material request for project
-    public MaterialRequest createMaterialRequest(Long projectId, String materialId, int quantity) {
-        return materialRequestService.createRequest(projectId, materialId, quantity);
+    public MaterialRequest createMaterialRequest(Long projectId, String materialId, int quantity, Users user) {
+        return materialRequestService.createRequest(projectId, materialId, quantity, user);
     }
 
     public List<ProjectMaterial> getMaterialsByProject(Long projectId) {

@@ -53,7 +53,8 @@ public class UserController {
                     .orElseThrow(() -> new RuntimeException("User not found"));
             return ResponseEntity.ok(Map.of(
                     "token", jwtToken,
-                    "role", dbUser.getRole()
+                    "role", dbUser.getRole(),
+                    "id", dbUser.getId()
             ));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");

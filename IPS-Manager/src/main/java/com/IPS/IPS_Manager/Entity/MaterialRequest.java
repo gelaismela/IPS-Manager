@@ -31,6 +31,11 @@ public class MaterialRequest {
     @ManyToOne
     private Users driver;
 
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    private Users createdBy;  // ✅ NEW FIELD - tracks who created the request
+
+
     private LocalDate requestDate = LocalDate.now();
     private LocalDate deliveryDate;
 

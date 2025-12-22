@@ -1,0 +1,50 @@
+.theme-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.theme-toggle-btn,
+.language-toggle-btn {
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #333;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .theme-toggle-btn,
+[data-theme="dark"] .language-toggle-btn {
+  background: #212633;
+  border-color: #2d3748;
+  color: #e8eaed;
+}
+
+.theme-toggle-btn:hover,
+.language-toggle-btn:hover {
+  background: #f0f0f0;
+  transform: scale(1.05);
+}
+
+[data-theme="dark"] .theme-toggle-btn:hover,
+[data-theme="dark"] .language-toggle-btn:hover {
+  background: #2d3748;
+}
+
+.theme-toggle-btn:active,
+.language-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.language-toggle-btn {
+  font-size: 12px;
+  font-weight: 600;
+}
