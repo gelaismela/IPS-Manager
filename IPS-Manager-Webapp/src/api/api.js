@@ -66,7 +66,7 @@ export async function authFetch(url, options = {}) {
 
 // AUTH -----------------------------------
 
-export async function login(email, password) {
+export async function login(email, password, remember = false) {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -75,12 +75,14 @@ export async function login(email, password) {
   if (!res.ok) throw new Error("Login failed");
   const data = await res.json();
 
-  // Store token, role, id, and email for easy access
+  // Store token, role, id, and email based on remember preference
+  const storage = remember ? localStorage : sessionStorage;
+  
   if (data.token) {
-    localStorage.setItem("token", data.token);
+    storage.setItem("token", data.token);
     if (data.role) {
-      localStorage.setItem("role", data.role); // Store role separately for ProtectedRoute
-      localStorage.setItem(
+      storage.setItem("role", data.role);
+      storage.setItem(
         "user",
         JSON.stringify({
           role: data.role,
@@ -90,7 +92,7 @@ export async function login(email, password) {
       );
     }
     if (data.id) {
-      localStorage.setItem("userId", data.id);
+      storage.setItem("userId", data.id);
     }
   }
 

@@ -307,6 +307,93 @@ const Delivery = () => {
             })}
           </tbody>
         </table>
+
+        {/* Mobile Card View */}
+        <div className="mobile-material-cards">
+          {materialSelections.map((mat, index) => {
+            const canAssign = mat.remainingQuantity > 0;
+            const requestCount = mat.requests.length;
+
+            return (
+              <div
+                key={index}
+                className={`mobile-material-card ${
+                  mat.selectedQuantity > 0 ? "selected" : ""
+                } ${!canAssign ? "disabled" : ""}`}
+              >
+                <div className="mobile-card-header">
+                  <div className="mobile-material-name">{mat.name}</div>
+                  {requestCount > 1 && (
+                    <div className="mobile-request-badge">
+                      {requestCount} reqs
+                    </div>
+                  )}
+                </div>
+                <div className="mobile-card-body">
+                  <div className="mobile-info-row">
+                    <span className="mobile-info-label">Requested:</span>
+                    <span className="mobile-info-value">
+                      {mat.requestedQuantity}
+                    </span>
+                  </div>
+                  <div className="mobile-info-row">
+                    <span className="mobile-info-label">Assigned:</span>
+                    <span className="mobile-info-value">
+                      {mat.assignedQuantity}
+                    </span>
+                  </div>
+                  <div className="mobile-info-row">
+                    <span className="mobile-info-label">Remaining:</span>
+                    <span
+                      className={`mobile-info-value ${
+                        canAssign ? "available" : "unavailable"
+                      }`}
+                    >
+                      {mat.remainingQuantity}
+                    </span>
+                  </div>
+                  <div className="mobile-info-row">
+                    <span className="mobile-info-label">Status:</span>
+                    <span
+                      className={`status-badge ${
+                        mat.status === "DELIVERED"
+                          ? "delivered"
+                          : mat.status === "ASSIGNED"
+                          ? "assigned"
+                          : "pending"
+                      }`}
+                    >
+                      {mat.status}
+                    </span>
+                  </div>
+                  {canAssign && (
+                    <div className="mobile-quantity-input">
+                      <label className="mobile-quantity-label">
+                        Assign Quantity:
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={mat.remainingQuantity}
+                        value={mat.selectedQuantity || ""}
+                        onChange={(e) =>
+                          handleMaterialSelection(index, e.target.value)
+                        }
+                        placeholder="Enter quantity"
+                        onFocus={(e) => e.target.select()}
+                      />
+                      {mat.selectedQuantity > mat.remainingQuantity && (
+                        <div className="quantity-error">
+                          ⚠️ Max: {mat.remainingQuantity}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="assignment-form">

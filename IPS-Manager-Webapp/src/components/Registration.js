@@ -52,20 +52,11 @@ function Login() {
     setLoading(true);
 
     try {
-      // 🔑 call backend API
-      const response = await login(email, password);
+      // 🔑 call backend API with remember preference
+      const response = await login(email, password, remember);
 
       // Suppose backend returns { token, role }
       const { token, role } = response;
-
-      // ✅ Store token + role
-      if (remember) {
-        localStorage.setItem("token", token);
-        localStorage.setItem("role", role);
-      } else {
-        sessionStorage.setItem("token", token);
-        sessionStorage.setItem("role", role);
-      }
 
       setSuccess(true);
 

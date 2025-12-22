@@ -119,6 +119,58 @@ const Project = () => {
               ))}
             </tbody>
           </table>
+
+          {/* Mobile Card View */}
+          <div className="mobile-project-materials">
+            {materials.map((mat) => (
+              <div key={mat.id} className="mobile-material-card">
+                <div className="mobile-material-name">{mat.material.name}</div>
+                <div className="mobile-material-info">
+                  <div className="mobile-info-row">
+                    <span className="mobile-info-label">Assigned:</span>
+                    <span className="mobile-info-value">
+                      {mat.assignedQuantity}
+                    </span>
+                  </div>
+                  <div className="mobile-info-row">
+                    <span className="mobile-info-label">Used:</span>
+                    <span className="mobile-info-value">
+                      {mat.quantityUsed}
+                    </span>
+                  </div>
+                </div>
+                <div className="mobile-request-input">
+                  <label className="mobile-request-label">
+                    Request Quantity:
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={requestQty[mat.material.id] || ""}
+                    onChange={(e) =>
+                      handleRequestChange(mat.material.id, e.target.value)
+                    }
+                    placeholder="Enter quantity"
+                    onFocus={(e) => e.target.select()}
+                  />
+                </div>
+                {requestStatus[mat.material.id] && (
+                  <div
+                    className={`mobile-status ${
+                      requestStatus[mat.material.id]
+                    }`}
+                  >
+                    {requestStatus[mat.material.id] === "success" &&
+                      "✓ Requested!"}
+                    {requestStatus[mat.material.id] === "error" && "✗ Error!"}
+                    {requestStatus[mat.material.id] === "pending" &&
+                      "⏳ Sending..."}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
           <button
             type="submit"
             style={{
