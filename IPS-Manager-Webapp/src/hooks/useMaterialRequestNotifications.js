@@ -9,7 +9,7 @@ import { useDeliveryNotifications } from "./useDeliveryNotifications";
  * Also triggers browser push notifications for status changes.
  * For project managers, only shows requests for their assigned projects.
  */
-export function useMaterialRequestNotifications({ pollMs = 30000 } = {}) {
+export function useMaterialRequestNotifications({ pollMs = 60000 } = {}) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

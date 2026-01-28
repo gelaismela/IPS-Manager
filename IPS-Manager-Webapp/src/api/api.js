@@ -77,7 +77,7 @@ export async function login(email, password, remember = false) {
 
   // Store token, role, id, and email based on remember preference
   const storage = remember ? localStorage : sessionStorage;
-  
+
   if (data.token) {
     storage.setItem("token", data.token);
     if (data.role) {
@@ -348,5 +348,51 @@ export async function updateDeliveryStatus(assignmentId, status) {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
+  });
+}
+
+// PUSH NOTIFICATIONS -----------------------------------
+
+/**
+ * Get VAPID public key for push notifications
+ * @returns {Promise<string>} VAPID public key
+ */
+export async function getVapidPublicKey() {
+  return authFetch("/api/push-notifications/vapid-public-key", {
+    method: "GET",
+  });
+}
+
+/**
+ * Subscribe to push notifications
+ * @param {Object} subscription - Push subscription object from browser
+ * @returns {Promise} Response from server
+ */
+export async function subscribeToPushNotifications(subscription) {
+  return authFetch("/api/push-notifications/subscribe", {
+    method: "POST",
+    body: JSON.stringify(subscription),
+  });
+}
+
+/**
+ * Unsubscribe from push notifications
+ * @param {string} endpoint - Subscription endpoint to remove
+ * @returns {Promise} Response from server
+ */
+export async function unsubscribeFromPushNotifications(endpoint) {
+  return authFetch("/api/push-notifications/unsubscribe", {
+    method: "POST",
+    body: JSON.stringify({ endpoint }),
+  });
+}
+
+/**
+ * Send a test notification
+ * @returns {Promise} Response from server
+ */
+export async function sendTestNotification() {
+  return authFetch("/api/push-notifications/test", {
+    method: "POST",
   });
 }

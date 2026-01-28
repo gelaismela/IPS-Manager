@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -28,6 +29,8 @@ public class MaterialRequestService {
     private final ProjectRepo projectRepo;
     private final ProjectMaterialRepo projectMaterialRepo;
 
+    // ✅ ADD THIS
+    private final PushNotificationService pushNotificationService;
 
     public MaterialRequest createRequest(Long projectId, String materialId, int qty, Users createdBy) {
         Project project = projectRepo.findById(projectId)
@@ -41,12 +44,27 @@ public class MaterialRequestService {
         request.setRequestedQuantity(qty);
         request.setRequestDate(LocalDate.now());
         request.setStatus(MaterialRequestStatus.PENDING);
-        request.setCreatedBy(createdBy);  // ✅ Set who created this request
+        request.setCreatedBy(createdBy);
 
-        return requestRepo.save(request);
+        MaterialRequest saved = requestRepo.save(request);
+
+        // ✅ Notify HEAD_DRIVER about new request
+        pushNotificationService.sendToRole(
+                "HEAD_DRIVER",
+                "🔔 New Material Request",
+                String.format("Project %s requested %d x %s",
+                        project.getName(), qty, material.getName()),
+                Map.of(
+                        "type", "material_request_created",
+                        "requestId", saved.getId().toString(),
+                        "projectId", projectId.toString()
+                )
+        );
+
+        return saved;
     }
 
-    // ✅ NEW METHOD - Get requests for projects managed by a project manager
+    // ✅ RESTORE THIS - Get requests for projects managed by a project manager
     public List<MaterialRequest> getRequestsByProjectManagerId(Long projectManagerId) {
         return requestRepo.findByProject_ProjectManager_Id(projectManagerId);
     }
@@ -65,12 +83,37 @@ public class MaterialRequestService {
         req.setDeliveryDate(dto.getDeliveryDate());
         req.setStatus(MaterialRequestStatus.ASSIGNED);
 
-        return requestRepo.save(req);
+        MaterialRequest saved = requestRepo.save(req);
+
+        // ✅ Notify driver about assignment
+        pushNotificationService.sendToUser(
+                driver,
+                "🚚 New Delivery Assignment",
+                String.format("You've been assigned to deliver %d x %s to %s",
+                        dto.getAssignedQuantity(),
+                        req.getMaterial().getName(),
+                        req.getProject().getName()),
+                Map.of(
+                        "type", "delivery_assigned",
+                        "requestId", requestId.toString(),
+                        "deliveryDate", dto.getDeliveryDate().toString()
+                )
+        );
+
+        // ✅ Notify project manager too
+        if (req.getProject().getProjectManager() != null) {
+            pushNotificationService.sendToUser(
+                    req.getProject().getProjectManager(),
+                    "✅ Driver Assigned",
+                    String.format("Driver %s assigned to deliver %s",
+                            driver.getName(), req.getMaterial().getName()),
+                    Map.of("type", "driver_assigned", "requestId", requestId.toString())
+            );
+        }
+
+        return saved;
     }
 
-
-
-    // Mark delivered
     @Transactional
     public MaterialRequest markDelivered(Long requestId) {
         MaterialRequest request = requestRepo.findById(requestId)
@@ -84,25 +127,50 @@ public class MaterialRequestService {
         projectMaterialRepo.save(pm);
 
         request.setStatus(MaterialRequestStatus.SENT);
-        return requestRepo.save(request);
+        MaterialRequest saved = requestRepo.save(request);
+
+        // ✅ Notify project manager
+        if (request.getProject().getProjectManager() != null) {
+            pushNotificationService.sendToUser(
+                    request.getProject().getProjectManager(),
+                    "📦 Delivery Completed",
+                    String.format("%d x %s delivered to %s",
+                            request.getAssignedQuantity(),
+                            request.getMaterial().getName(),
+                            request.getProject().getName()),
+                    Map.of("type", "delivery_completed", "requestId", requestId.toString())
+            );
+        }
+
+        // ✅ Notify HEAD_DRIVER too
+        pushNotificationService.sendToRole(
+                "HEAD_DRIVER",
+                "✅ Delivery Completed",
+                String.format("Delivery to %s completed successfully",
+                        request.getProject().getName()),
+                Map.of("type", "delivery_completed", "requestId", requestId.toString())
+        );
+
+        return saved;
     }
 
-
-
+    // ✅ RESTORE THIS
     public List<MaterialRequest> getPendingRequestsForProject(Long projectId) {
         return requestRepo.findByProjectIdAndStatus(projectId, MaterialRequestStatus.PENDING);
     }
 
+    // ✅ RESTORE THIS
     public List<MaterialRequest> getAllPendingRequests() {
         return requestRepo.findByStatus(MaterialRequestStatus.PENDING);
     }
 
+    // ✅ RESTORE THIS
     public Optional<MaterialRequest> getRequestById(Long id) {
         return requestRepo.findById(id);
     }
 
+    // ✅ RESTORE THIS
     public List<MaterialRequest> getAllRequestsForProject(Long projectId) {
         return requestRepo.findByProject_Id(projectId);
     }
-
 }

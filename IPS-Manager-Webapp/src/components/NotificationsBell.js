@@ -3,7 +3,7 @@ import { useMaterialRequestNotifications } from "../hooks/useMaterialRequestNoti
 
 export default function NotificationsBell() {
   const { notifications, unreadCount, open, setOpen, loading } =
-    useMaterialRequestNotifications({ pollMs: 30000 });
+    useMaterialRequestNotifications({ pollMs: 60000 }); // Poll every 60s instead of 30s
 
   const getStatusBadge = (status) => {
     const styles = {

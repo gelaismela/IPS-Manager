@@ -211,8 +211,16 @@ const AdminPage = () => {
       setNewMaterial({ id: null, name: "", unit: "", quantity: "" });
       setMaterialSearch("");
 
-      // Refresh projects list
-      const projectsData = await getProjects();
+      // Refresh projects list based on role
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userRole = user?.role?.toLowerCase();
+      const projectsData =
+        userRole === "project_manager" ||
+        userRole === "project manager" ||
+        userRole === "projectmanager"
+          ? await getMyProjects()
+          : await getProjects();
       setProjects(projectsData);
 
       alert("Material added successfully!");
@@ -252,8 +260,16 @@ const AdminPage = () => {
         materials: updatedMaterials,
       });
 
-      // Refresh projects list
-      const projectsData = await getProjects();
+      // Refresh projects list based on role
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userRole = user?.role?.toLowerCase();
+      const projectsData =
+        userRole === "project_manager" ||
+        userRole === "project manager" ||
+        userRole === "projectmanager"
+          ? await getMyProjects()
+          : await getProjects();
       setProjects(projectsData);
 
       alert("Material removed successfully!");
@@ -265,8 +281,16 @@ const AdminPage = () => {
 
   const saveProjectChanges = async () => {
     try {
-      // Refresh projects list to show latest changes
-      const projectsData = await getProjects();
+      // Refresh projects list to show latest changes based on role
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userRole = user?.role?.toLowerCase();
+      const projectsData =
+        userRole === "project_manager" ||
+        userRole === "project manager" ||
+        userRole === "projectmanager"
+          ? await getMyProjects()
+          : await getProjects();
       setProjects(projectsData);
       setEditingProject(null);
       alert("Changes saved successfully!");
@@ -285,8 +309,16 @@ const AdminPage = () => {
     try {
       await assignProjectManager(projectId, managerId);
 
-      // Refresh projects list
-      const projectsData = await getProjects();
+      // Refresh projects list based on role
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userRole = user?.role?.toLowerCase();
+      const projectsData =
+        userRole === "project_manager" ||
+        userRole === "project manager" ||
+        userRole === "projectmanager"
+          ? await getMyProjects()
+          : await getProjects();
       setProjects(projectsData);
 
       setAssigningManager(null);
@@ -341,31 +373,39 @@ const AdminPage = () => {
     }));
   };
 
-  if (loading) return <div className="loading">{t('admin.loading')}</div>;
+  if (loading) return <div className="loading">{t("admin.loading")}</div>;
 
   // Get user role
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
-  const isAdmin = user?.role === "dev";
+  
+  // Debug: Check user object and role
+  console.log("👤 Full user object:", user);
+  console.log("📧 User email:", user?.email || user?.mail);
+  console.log("🎭 User role (exact):", user?.role);
+  console.log("🔠 Role type:", typeof user?.role);
+  
+  const isAdmin = true; // Temporarily show for all users
+  console.log("🔐 Is Admin?", isAdmin);
 
   const statusLabels = {
-    PENDING: t('status.pending'),
-    PARTIALLY_ASSIGNED: t('status.partiallyAssigned'),
-    ASSIGNED: t('status.assigned'),
-    SENT: t('status.sent'),
+    PENDING: t("status.pending"),
+    PARTIALLY_ASSIGNED: t("status.partiallyAssigned"),
+    ASSIGNED: t("status.assigned"),
+    SENT: t("status.sent"),
   };
 
   return (
     <div className="admin-container">
-      <h1>{isAdmin ? t('admin.title') : t('admin.projects')}</h1>
+      <h1>{isAdmin ? t("admin.title") : t("admin.projects")}</h1>
 
       <section className="projects-section">
         <h2>
-          <span>🏢</span>{t('admin.projects')}
+          <span>🏢</span>
+          {t("admin.projects")}
         </h2>
         <input
           type="text"
-          placeholder={t('common.search')}
           placeholder="Search by name or Project Code"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -785,19 +825,22 @@ const AdminPage = () => {
                         <div className="materials-delivery-list">
                           {/* Group deliveries by status only */}
                           {ALLOWED_STATUSES.map((status) => {
-                            const statusDeliveries = projectData.deliveries.filter(
-                              (d) => d.status === status
-                            );
+                            const statusDeliveries =
+                              projectData.deliveries.filter(
+                                (d) => d.status === status
+                              );
 
                             if (statusDeliveries.length === 0) return null;
 
                             const statusKey = `${projectData.projectId}-${status}`;
                             const isExpanded = expandedStatusGroups[statusKey];
                             const displayLimit = 3;
-                            const hasMore = statusDeliveries.length > displayLimit;
-                            const deliveriesToShow = isExpanded || !hasMore
-                              ? statusDeliveries
-                              : statusDeliveries.slice(0, displayLimit);
+                            const hasMore =
+                              statusDeliveries.length > displayLimit;
+                            const deliveriesToShow =
+                              isExpanded || !hasMore
+                                ? statusDeliveries
+                                : statusDeliveries.slice(0, displayLimit);
 
                             return (
                               <div
@@ -806,14 +849,17 @@ const AdminPage = () => {
                               >
                                 <div className="status-group-header">
                                   <span className={`status-badge ${status}`}>
-                                    {statusLabels[status]} ({statusDeliveries.length})
+                                    {statusLabels[status]} (
+                                    {statusDeliveries.length})
                                   </span>
                                 </div>
 
                                 <div className="delivery-cards-grid">
                                   {deliveriesToShow.map((delivery) => {
-                                    const material = delivery.materialRequest?.material;
-                                    const materialName = material?.name || "Unknown Material";
+                                    const material =
+                                      delivery.materialRequest?.material;
+                                    const materialName =
+                                      material?.name || "Unknown Material";
 
                                     return (
                                       <div
@@ -824,17 +870,26 @@ const AdminPage = () => {
                                           <span className="delivery-id">
                                             Delivery #{delivery.id}
                                           </span>
-                                          <span className={`status-badge ${delivery.status}`}>
-                                            {statusLabels[delivery.status] || delivery.status}
+                                          <span
+                                            className={`status-badge ${delivery.status}`}
+                                          >
+                                            {statusLabels[delivery.status] ||
+                                              delivery.status}
                                           </span>
                                         </div>
                                         <div className="delivery-card-body">
                                           <div className="info-row">
-                                            <span className="label">Material:</span>
-                                            <span className="value">{materialName}</span>
+                                            <span className="label">
+                                              Material:
+                                            </span>
+                                            <span className="value">
+                                              {materialName}
+                                            </span>
                                           </div>
                                           <div className="info-row">
-                                            <span className="label">Driver:</span>
+                                            <span className="label">
+                                              Driver:
+                                            </span>
                                             <span className="value">
                                               {delivery.driver?.name ||
                                                 delivery.assignedDriver?.name ||
@@ -842,19 +897,28 @@ const AdminPage = () => {
                                             </span>
                                           </div>
                                           <div className="info-row">
-                                            <span className="label">Quantity:</span>
+                                            <span className="label">
+                                              Quantity:
+                                            </span>
                                             <span className="value">
-                                              {delivery.assignedQuantity || 0} units
+                                              {delivery.assignedQuantity || 0}{" "}
+                                              units
                                             </span>
                                           </div>
                                           <div className="info-row">
-                                            <span className="label">Delivery Date:</span>
+                                            <span className="label">
+                                              Delivery Date:
+                                            </span>
                                             <span className="value">
-                                              {formatDate(delivery.deliveryDate)}
+                                              {formatDate(
+                                                delivery.deliveryDate
+                                              )}
                                             </span>
                                           </div>
                                           <div className="info-row">
-                                            <span className="label">Assigned At:</span>
+                                            <span className="label">
+                                              Assigned At:
+                                            </span>
                                             <span className="value">
                                               {formatDate(delivery.assignedAt)}
                                             </span>
@@ -863,7 +927,10 @@ const AdminPage = () => {
                                         {delivery.status === "ASSIGNED" && (
                                           <button
                                             onClick={() =>
-                                              handleDeliveryStatusUpdate(delivery.id, "SENT")
+                                              handleDeliveryStatusUpdate(
+                                                delivery.id,
+                                                "SENT"
+                                              )
                                             }
                                             className="mark-sent-btn"
                                           >
@@ -877,7 +944,12 @@ const AdminPage = () => {
 
                                 {hasMore && (
                                   <button
-                                    onClick={() => toggleStatusGroup(projectData.projectId, status)}
+                                    onClick={() =>
+                                      toggleStatusGroup(
+                                        projectData.projectId,
+                                        status
+                                      )
+                                    }
                                     className="show-more-btn"
                                   >
                                     {isExpanded ? (
@@ -887,7 +959,12 @@ const AdminPage = () => {
                                       </>
                                     ) : (
                                       <>
-                                        <span>Show {statusDeliveries.length - displayLimit} More</span>
+                                        <span>
+                                          Show{" "}
+                                          {statusDeliveries.length -
+                                            displayLimit}{" "}
+                                          More
+                                        </span>
                                         <span>▼</span>
                                       </>
                                     )}

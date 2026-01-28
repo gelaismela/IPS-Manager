@@ -58,8 +58,8 @@ const DriverDelivery = () => {
 
     fetchData();
 
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchData, 30000);
+    // Poll for updates every 60 seconds (reduced since push notifications are active)
+    const interval = setInterval(fetchData, 60000);
 
     return () => clearInterval(interval);
   }, [driverId]);

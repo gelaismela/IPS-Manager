@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import notificationService from "../services/notificationService";
+import { subscribeToPushNotifications, getVapidPublicKey } from "../api/api";
 
 /**
  * Notification Settings Component
@@ -8,13 +9,49 @@ import notificationService from "../services/notificationService";
 export default function NotificationSettings() {
   const [permission, setPermission] = useState("default");
   const [isSupported, setIsSupported] = useState(true);
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
 
   useEffect(() => {
     setIsSupported("Notification" in window);
     if ("Notification" in window) {
       setPermission(Notification.permission);
+
+      // Auto-subscribe if permission already granted but not subscribed
+      checkAndAutoSubscribe();
     }
+
+    // Check if already subscribed to push notifications
+    checkPushSubscription();
   }, []);
+
+  const checkPushSubscription = async () => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      return;
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      setIsPushSubscribed(!!subscription);
+      return !!subscription;
+    } catch (error) {
+      console.error("Error checking push subscription:", error);
+      return false;
+    }
+  };
+
+  const checkAndAutoSubscribe = async () => {
+    // If permission is already granted, check if we need to subscribe
+    if (Notification.permission === "granted") {
+      const isSubscribed = await checkPushSubscription();
+      if (!isSubscribed) {
+        console.log(
+          "🔄 Permission granted but not subscribed. Auto-subscribing..."
+        );
+        await subscribeToPush();
+      }
+    }
+  };
 
   const handleEnableNotifications = async () => {
     const result = await notificationService.requestPermission();
@@ -25,6 +62,83 @@ export default function NotificationSettings() {
       notificationService.show("🎉 Notifications Enabled!", {
         body: "You'll now receive delivery status updates",
       });
+
+      // Subscribe to push notifications
+      await subscribeToPush();
+    }
+  };
+
+  const subscribeToPush = async () => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      console.log("Push notifications not supported");
+      return;
+    }
+
+    try {
+      // Get VAPID public key from backend
+      console.log("📡 Fetching VAPID public key from backend...");
+      const vapidResponse = await getVapidPublicKey();
+      const vapidPublicKey = vapidResponse.publicKey;
+      console.log(
+        "✅ Got VAPID public key:",
+        vapidPublicKey.substring(0, 20) + "..."
+      );
+
+      // Register service worker
+      console.log("📝 Registering service worker...");
+      const registration = await navigator.serviceWorker.register(
+        "/service-worker.js"
+      );
+      await navigator.serviceWorker.ready;
+      console.log("✅ Service worker ready");
+
+      // Check if already subscribed
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        console.log("🔔 Subscribing to push notifications...");
+        // Convert VAPID key from base64 to Uint8Array
+        const urlBase64ToUint8Array = (base64String) => {
+          const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+          const base64 = (base64String + padding)
+            .replace(/\-/g, "+")
+            .replace(/_/g, "/");
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+          }
+          return outputArray;
+        };
+
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+        console.log("✅ Push subscription created");
+      } else {
+        console.log("ℹ️ Already subscribed to push");
+      }
+
+      // Convert subscription to format backend expects
+      const subscriptionJSON = subscription.toJSON();
+      const pushSubscription = {
+        endpoint: subscriptionJSON.endpoint,
+        keys: {
+          p256dh: subscriptionJSON.keys.p256dh,
+          auth: subscriptionJSON.keys.auth,
+        },
+      };
+
+      // Send subscription to backend
+      console.log("📤 Sending subscription to backend...");
+      await subscribeToPushNotifications(pushSubscription);
+      setIsPushSubscribed(true);
+
+      console.log("✅ Successfully subscribed to push notifications!");
+    } catch (error) {
+      console.error("❌ Failed to subscribe to push notifications:", error);
+      alert("Failed to enable push notifications. Check console for details.");
     }
   };
 
@@ -75,6 +189,11 @@ export default function NotificationSettings() {
             style={{ ...styles.iconLarge, color: "#28a745" }}
           />
           <h3 style={styles.title}>Notifications Enabled</h3>
+          {isPushSubscribed && (
+            <p style={{ ...styles.text, color: "#28a745", fontWeight: 600 }}>
+              ✅ Push notifications active (works even when browser is closed)
+            </p>
+          )}
           <p style={styles.text}>You'll receive browser notifications when:</p>
           <ul style={styles.list}>
             <li>🚚 A delivery is assigned to you (Drivers)</li>
