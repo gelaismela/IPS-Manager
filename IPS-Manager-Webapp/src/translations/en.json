@@ -10,7 +10,6 @@
     "noDeliveries": "No deliveries available. This may be due to backend permissions.",
     "noPendingRequests": "No pending requests",
     "loading": "Loading admin dashboard...",
-    "totalDeliveries": "total",
     "assigned": "assigned",
     "sent": "sent",
     "pending": "pending",

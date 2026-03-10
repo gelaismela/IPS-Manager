@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import notificationService from "../services/notificationService";
 import { subscribeToPushNotifications, getVapidPublicKey } from "../api/api";
+import { useToast } from "../contexts/ToastContext";
 
 /**
  * Notification Settings Component
@@ -10,6 +11,7 @@ export default function NotificationSettings() {
   const [permission, setPermission] = useState("default");
   const [isSupported, setIsSupported] = useState(true);
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+  const showToast = useToast();
 
   useEffect(() => {
     setIsSupported("Notification" in window);
@@ -45,9 +47,6 @@ export default function NotificationSettings() {
     if (Notification.permission === "granted") {
       const isSubscribed = await checkPushSubscription();
       if (!isSubscribed) {
-        console.log(
-          "🔄 Permission granted but not subscribed. Auto-subscribing..."
-        );
         await subscribeToPush();
       }
     }
@@ -70,33 +69,23 @@ export default function NotificationSettings() {
 
   const subscribeToPush = async () => {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      console.log("Push notifications not supported");
       return;
     }
 
     try {
       // Get VAPID public key from backend
-      console.log("📡 Fetching VAPID public key from backend...");
       const vapidResponse = await getVapidPublicKey();
       const vapidPublicKey = vapidResponse.publicKey;
-      console.log(
-        "✅ Got VAPID public key:",
-        vapidPublicKey.substring(0, 20) + "..."
-      );
 
       // Register service worker
-      console.log("📝 Registering service worker...");
-      const registration = await navigator.serviceWorker.register(
-        "/service-worker.js"
-      );
+      const registration =
+        await navigator.serviceWorker.register("/service-worker.js");
       await navigator.serviceWorker.ready;
-      console.log("✅ Service worker ready");
 
       // Check if already subscribed
       let subscription = await registration.pushManager.getSubscription();
 
       if (!subscription) {
-        console.log("🔔 Subscribing to push notifications...");
         // Convert VAPID key from base64 to Uint8Array
         const urlBase64ToUint8Array = (base64String) => {
           const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -115,9 +104,6 @@ export default function NotificationSettings() {
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
-        console.log("✅ Push subscription created");
-      } else {
-        console.log("ℹ️ Already subscribed to push");
       }
 
       // Convert subscription to format backend expects
@@ -131,14 +117,11 @@ export default function NotificationSettings() {
       };
 
       // Send subscription to backend
-      console.log("📤 Sending subscription to backend...");
       await subscribeToPushNotifications(pushSubscription);
       setIsPushSubscribed(true);
-
-      console.log("✅ Successfully subscribed to push notifications!");
     } catch (error) {
-      console.error("❌ Failed to subscribe to push notifications:", error);
-      alert("Failed to enable push notifications. Check console for details.");
+      console.error("Failed to subscribe to push notifications:", error);
+      showToast("Failed to enable push notifications. Check console for details.", "error");
     }
   };
 

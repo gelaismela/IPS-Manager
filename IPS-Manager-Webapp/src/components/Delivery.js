@@ -4,13 +4,16 @@ import {
   getAllRequestsForProject,
   getDrivers,
   assignMaterialRequest,
-  createDelivery,
+  getAllMaterials,
+  createFailedRequest,
 } from "../api/api";
 import "../styles/delivery.css";
+import { useToast } from "../contexts/ToastContext";
 
 const Delivery = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const showToast = useToast();
   const [requests, setRequests] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +102,7 @@ const Delivery = () => {
     const newQuantity = Math.max(0, parseInt(quantity) || 0);
     updatedSelections[index].selectedQuantity = Math.min(
       newQuantity,
-      maxQuantity
+      maxQuantity,
     );
     updatedSelections[index].selected =
       updatedSelections[index].selectedQuantity > 0;
@@ -111,87 +114,140 @@ const Delivery = () => {
     e.preventDefault();
 
     const selectedMaterials = materialSelections.filter(
-      (mat) => mat.selected && mat.selectedQuantity > 0
+      (mat) => mat.selected && mat.selectedQuantity > 0,
     );
 
     if (selectedMaterials.length === 0) {
-      alert("Please select at least one material to deliver");
+      showToast("Please select at least one material to deliver.", "warning");
       return;
     }
 
     const selectedDriver = drivers.find((d) => d.id === formData.driverId);
     if (!selectedDriver) {
-      alert("Please select a driver");
+      showToast("Please select a driver.", "warning");
       return;
     }
 
     // Validate quantities before submitting
     const invalidMaterials = selectedMaterials.filter(
-      (mat) => mat.selectedQuantity > mat.remainingQuantity
+      (mat) => mat.selectedQuantity > mat.remainingQuantity,
     );
 
     if (invalidMaterials.length > 0) {
-      alert(
-        `Error: The following materials exceed remaining quantity:\n${invalidMaterials
-          .map(
-            (mat) =>
-              `- ${mat.name}: Selected ${mat.selectedQuantity}, Available ${mat.remainingQuantity}`
-          )
-          .join("\n")}`
+      showToast(
+        `The following materials exceed remaining quantity:\n${invalidMaterials.map((mat) => `• ${mat.name}: selected ${mat.selectedQuantity}, available ${mat.remainingQuantity}`).join("\n")}`,
+        "warning",
       );
       return;
     }
 
     try {
-      for (const mat of selectedMaterials) {
-        const deliveryDateToSend = formData.deliveryDate
-          ? formData.deliveryDate
-          : undefined;
+      // Fetch current catalog stock for all selected materials at once
+      const catalog = await getAllMaterials();
+      const stockMap = new Map((catalog || []).map((m) => [m.id, m.quantity ?? 0]));
 
-        // Distribute the selected quantity across individual requests
+      const failedMaterials = [];
+      const assignableMaterials = [];
+
+      for (const mat of selectedMaterials) {
+        const inCatalog = stockMap.has(mat.id);
+        const stockQty = stockMap.get(mat.id) ?? 0;
+        // If material exists in catalog, enforce stock check
+        // If not in catalog at all, allow assignment (untracked)
+        if (inCatalog && stockQty < mat.selectedQuantity) {
+          failedMaterials.push({ ...mat, availableStock: stockQty });
+        } else {
+          assignableMaterials.push(mat);
+        }
+      }
+
+      // Create failed requests for materials with insufficient stock
+      // Wrapped individually so a backend error here never blocks assignments
+      const failedLogged = [];
+      for (const mat of failedMaterials) {
+        try {
+          await createFailedRequest({
+            type: "STOCK_SHORTAGE",
+            materialId: mat.id,
+            requestedQuantity: mat.selectedQuantity,
+            availableQuantity: mat.availableStock,
+            driverId: selectedDriver.id,
+            deliveryDate: formData.deliveryDate || null,
+          });
+          failedLogged.push(mat);
+        } catch (err) {
+          console.warn("Failed to log shortage for", mat.name, err.message);
+        }
+      }
+
+      // Assign materials that have enough stock
+      const assignmentErrors = [];
+      for (const mat of assignableMaterials) {
+        const deliveryDateToSend = formData.deliveryDate || undefined;
         let remainingToAssign = mat.selectedQuantity;
 
         for (const request of mat.requests) {
           if (remainingToAssign <= 0) break;
-
           const requestRemaining =
             request.requestedQuantity - (request.assignedQuantity || 0);
-          if (requestRemaining <= 0) continue; // Skip fully assigned requests
+          if (requestRemaining <= 0) continue;
 
-          const assignQty = Math.min(remainingToAssign, requestRemaining);
+          // Hard cap: never send more than the individual request's total requested qty
+          const assignQty = Math.min(remainingToAssign, requestRemaining, request.requestedQuantity);
+          if (assignQty <= 0) continue;
 
-          console.log("Assigning material request:", {
-            requestId: request.id,
-            materialName: mat.name,
-            driverId: selectedDriver.id,
-            assignedQuantity: assignQty,
-            requestRemaining: requestRemaining,
-            deliveryDate: deliveryDateToSend,
-          });
-
-          await assignMaterialRequest(
-            request.id,
-            selectedDriver.id,
-            assignQty,
-            deliveryDateToSend
-          );
-
-          remainingToAssign -= assignQty;
-        }
-
-        if (remainingToAssign > 0) {
-          console.warn(
-            `Could not assign all quantity for ${mat.name}. Remaining: ${remainingToAssign}`
-          );
+          try {
+            await assignMaterialRequest(
+              request.id,
+              selectedDriver.id,
+              assignQty,
+              deliveryDateToSend,
+            );
+            remainingToAssign -= assignQty;
+          } catch (err) {
+            // Backend rejected — log as failed request
+            try {
+              await createFailedRequest({
+                type: "STOCK_SHORTAGE",
+                materialId: mat.id,
+                requestedQuantity: assignQty,
+                availableQuantity: request.requestedQuantity,
+                driverId: selectedDriver.id,
+                deliveryDate: formData.deliveryDate || null,
+              });
+            } catch (logErr) {
+              console.warn("Failed to log failed request for", mat.name, logErr.message);
+            }
+            assignmentErrors.push(`${mat.name}: ${err.message}`);
+          }
         }
       }
 
-      alert(`Delivery assigned successfully to ${selectedDriver.name}!`);
-      navigate("/deliveries");
+      if (assignmentErrors.length > 0) {
+        showToast(`Some assignments failed:\n${assignmentErrors.join("\n")}`, "error");
+      } else if (failedMaterials.length > 0 && assignableMaterials.length > 0) {
+        showToast(
+          `Partially assigned to ${selectedDriver.name}.\nInsufficient stock for:\n` +
+          failedMaterials.map((m) => `• ${m.name}: needed ${m.selectedQuantity}, available ${m.availableStock}`).join("\n") +
+          "\nThese have been logged as failed requests.",
+          "warning",
+        );
+      } else if (failedMaterials.length > 0) {
+        showToast(
+          `Could not assign — insufficient stock:\n` +
+          failedMaterials.map((m) => `• ${m.name}: needed ${m.selectedQuantity}, available ${m.availableStock}`).join("\n") +
+          "\nLogged as failed requests.",
+          "error",
+        );
+      } else {
+        showToast(`Delivery assigned successfully to ${selectedDriver.name}.`, "success");
+      }
+
+      navigate("/deliveryRequests");
     } catch (err) {
       console.error("Assignment error:", err);
       const errorMessage = err.message || "Failed to assign delivery";
-      alert(`Error: ${errorMessage}`);
+      showToast(`Error: ${errorMessage}`, "error");
     }
   };
 
@@ -242,7 +298,10 @@ const Delivery = () => {
                     mat.selectedQuantity > 0 ? "material-row-selected" : ""
                   } ${!canAssign ? "material-row-disabled" : ""}`}
                 >
-                  <td className="request-id-cell" title={`Request IDs: ${requestIds}`}>
+                  <td
+                    className="request-id-cell"
+                    title={`Request IDs: ${requestIds}`}
+                  >
                     {requestCount > 1 ? (
                       <span className="request-count-badge">
                         {requestCount} reqs
@@ -251,13 +310,9 @@ const Delivery = () => {
                       `#${mat.requests[0].id}`
                     )}
                   </td>
-                  <td className="material-name-cell">
-                    {mat.name}
-                  </td>
+                  <td className="material-name-cell">{mat.name}</td>
                   <td>{mat.requestedQuantity}</td>
-                  <td className="request-id-cell">
-                    {mat.assignedQuantity}
-                  </td>
+                  <td className="request-id-cell">{mat.assignedQuantity}</td>
                   <td>
                     <span
                       className={`remaining-qty ${
@@ -273,8 +328,8 @@ const Delivery = () => {
                         mat.status === "DELIVERED"
                           ? "delivered"
                           : mat.status === "ASSIGNED"
-                          ? "assigned"
-                          : "pending"
+                            ? "assigned"
+                            : "pending"
                       }`}
                     >
                       {mat.status}
@@ -359,8 +414,8 @@ const Delivery = () => {
                         mat.status === "DELIVERED"
                           ? "delivered"
                           : mat.status === "ASSIGNED"
-                          ? "assigned"
-                          : "pending"
+                            ? "assigned"
+                            : "pending"
                       }`}
                     >
                       {mat.status}

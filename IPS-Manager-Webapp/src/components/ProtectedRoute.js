@@ -6,9 +6,28 @@ function ProtectedRoute({ allowedRoles, children }) {
     localStorage.getItem("token") || sessionStorage.getItem("token");
   const role = localStorage.getItem("role") || sessionStorage.getItem("role");
 
-  if (!token || !role || !allowedRoles.includes(role)) {
-    return <Navigate to="/login" replace />;
+  // No token at all → go to login
+  if (!token || !role) {
+    return <Navigate to="/" replace />;
   }
+
+  // Has token but wrong role → show access denied (prevents redirect loop)
+  if (!allowedRoles.includes(role)) {
+    return (
+      <div style={{ padding: "40px", textAlign: "center" }}>
+        <h2>Access Denied</h2>
+        <p>You don't have permission to view this page.</p>
+        <button onClick={() => {
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.href = "/";
+        }}>
+          Log out
+        </button>
+      </div>
+    );
+  }
+
   return children;
 }
 

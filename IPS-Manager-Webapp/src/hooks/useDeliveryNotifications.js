@@ -13,7 +13,7 @@ import { getUserRole } from "../services/roleService";
 export function useDeliveryNotifications(
   deliveries = [],
   materialRequests = [],
-  enabled = true
+  enabled = true,
 ) {
   const isInitialized = useRef(false);
   const permissionRequested = useRef(false);
@@ -29,9 +29,9 @@ export function useDeliveryNotifications(
         permissionRequested.current = true;
 
         if (permission === "granted") {
-          console.log("✅ Browser notifications enabled");
+          // notifications enabled
         } else if (permission === "denied") {
-          console.log("❌ Browser notifications blocked by user");
+          // notifications blocked
         }
       } catch (error) {
         console.error("Failed to request notification permission:", error);
@@ -69,7 +69,7 @@ export function useDeliveryNotifications(
       // Subsequent loads: check for changes and notify
       notificationService.checkMaterialRequestChanges(
         materialRequests,
-        userRole
+        userRole,
       );
     }
   }, [materialRequests, enabled, userRole]);

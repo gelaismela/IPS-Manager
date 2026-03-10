@@ -7,6 +7,7 @@ import {
 } from "../api/api";
 import { useDeliveryNotifications } from "../hooks/useDeliveryNotifications";
 import "../styles/driverDelivery.css";
+import { useToast } from "../contexts/ToastContext";
 
 const ALLOWED_STATUSES = ["PENDING", "PARTIALLY_ASSIGNED", "ASSIGNED", "SENT"];
 
@@ -30,13 +31,14 @@ const DriverDelivery = () => {
   const [materialRequests, setMaterialRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeDelivery, setActiveDelivery] = useState(null);
+  const showToast = useToast();
 
   // Enable browser notifications for drivers
   useDeliveryNotifications(deliveries, materialRequests, true);
 
   useEffect(() => {
     if (!driverId) {
-      alert("Driver ID not found in URL!");
+      showToast("Driver ID not found. Please log in again.", "error");
       return;
     }
 
@@ -83,7 +85,7 @@ const DriverDelivery = () => {
 
   const handleStatusUpdate = async (deliveryId, newStatus) => {
     if (!ALLOWED_STATUSES.includes(newStatus)) {
-      alert(`Invalid status: ${newStatus}`);
+      showToast(`Invalid status: ${newStatus}`, "error");
       return;
     }
     try {
@@ -98,10 +100,10 @@ const DriverDelivery = () => {
       setActiveDelivery((prev) =>
         prev ? { ...prev, status: newStatus } : prev
       );
-      alert(`Status updated to ${statusLabels[newStatus]}`);
+      showToast(`Status updated to ${statusLabels[newStatus]}.`, "success");
     } catch (error) {
       console.error("Error updating status:", error);
-      alert("Failed to update status");
+      showToast("Failed to update status.", "error");
     }
   };
 

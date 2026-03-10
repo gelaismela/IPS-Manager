@@ -21,7 +21,11 @@ function Login() {
     const role = localStorage.getItem("role") || sessionStorage.getItem("role");
 
     if (token && role) {
-      navigate(`/${role}`); // redirect directly
+      if (role === "driver") navigate("/driver-deliveries");
+      else if (role === "project_manager") navigate("/projects");
+      else if (role === "head_driver") navigate("/deliveryRequests");
+      else if (role === "dev" || role === "admin") navigate("/admin");
+      else navigate("/projects");
     }
   }, [navigate]);
 
@@ -55,8 +59,10 @@ function Login() {
       // 🔑 call backend API with remember preference
       const response = await login(email, password, remember);
 
-      // Suppose backend returns { token, role }
-      const { token, role } = response;
+      // Normalize role to match frontend conventions
+      const { token } = response;
+      let role = (response.role || "").toLowerCase();
+      if (role === "head_of_drivers" || role === "head_of_driver") role = "head_driver";
 
       setSuccess(true);
 

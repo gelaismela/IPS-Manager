@@ -85,6 +85,12 @@ public class MaterialRequestService {
 
         MaterialRequest saved = requestRepo.save(req);
 
+        Material material = materialRepo.findById(req.getMaterial().getId())
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        int currentStock = material.getQuantity();
+        material.setQuantity(Math.max(0, currentStock - dto.getAssignedQuantity()));
+        materialRepo.save(material);
+
         // ✅ Notify driver about assignment
         pushNotificationService.sendToUser(
                 driver,
@@ -113,6 +119,8 @@ public class MaterialRequestService {
 
         return saved;
     }
+
+
 
     @Transactional
     public MaterialRequest markDelivered(Long requestId) {

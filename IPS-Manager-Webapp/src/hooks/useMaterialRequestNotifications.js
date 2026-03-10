@@ -32,7 +32,7 @@ export function useMaterialRequestNotifications({ pollMs = 60000 } = {}) {
     try {
       localStorage.setItem(
         "MR_SEEN_KEYS",
-        JSON.stringify(Array.from(seenRef.current))
+        JSON.stringify(Array.from(seenRef.current)),
       );
     } catch {}
   };
@@ -48,9 +48,6 @@ export function useMaterialRequestNotifications({ pollMs = 60000 } = {}) {
         const user = userStr ? JSON.parse(userStr) : null;
         const userRole = user?.role?.toLowerCase();
 
-        console.log("🔍 Material Requests - User:", user);
-        console.log("🔍 Material Requests - Role:", userRole);
-
         // Fetch requests based on role
         let data;
         if (
@@ -58,13 +55,9 @@ export function useMaterialRequestNotifications({ pollMs = 60000 } = {}) {
           userRole === "project manager" ||
           userRole === "projectmanager"
         ) {
-          console.log("✅ Fetching MY project requests only (project_manager)");
           data = await getMyProjectRequests();
-          console.log("📦 My project requests received:", data);
         } else {
-          console.log("✅ Fetching ALL requests (admin/dev)");
           data = await getAllMaterialRequests();
-          console.log("📦 All requests received:", data);
         }
 
         if (!stop) {
@@ -136,7 +129,7 @@ export function useMaterialRequestNotifications({ pollMs = 60000 } = {}) {
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => n.unread).length,
-    [notifications]
+    [notifications],
   );
 
   const markAllRead = () => {

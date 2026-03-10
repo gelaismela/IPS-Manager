@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getProjects, getMyProjects } from "../api/api";
+import { getMyProjects } from "../api/api";
 import "../styles/projectList.css";
 
 const ProjectList = () => {
@@ -13,23 +13,7 @@ const ProjectList = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        // Get user role from localStorage
-        const userStr = localStorage.getItem("user");
-        const user = userStr ? JSON.parse(userStr) : null;
-        const userRole = user?.role?.toLowerCase();
-
-        // Fetch projects based on role
-        let data;
-        if (
-          userRole === "project_manager" ||
-          userRole === "project manager" ||
-          userRole === "projectmanager"
-        ) {
-          data = await getMyProjects(); // Project managers see only assigned projects
-        } else {
-          data = await getProjects(); // Admins see all projects
-        }
-
+        const data = await getMyProjects();
         setProjects(data);
         setIsPending(false);
       } catch (err) {
@@ -48,7 +32,7 @@ const ProjectList = () => {
         project.name?.toLowerCase().includes(search.toLowerCase()) ||
         String(project.project_code || project.projectCode)
           .toLowerCase()
-          .includes(search.toLowerCase())
+          .includes(search.toLowerCase()),
     )
     .slice(0, 6); // Show only first 6
 
@@ -61,32 +45,32 @@ const ProjectList = () => {
 
   return (
     <div className="projectList-main">
-        <h2>All Projects</h2>
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search by name or code"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {filteredProjects.length > 0 ? (
-          <ul className="projectList">
-            {filteredProjects.map((project) => (
-              <li
-                key={project.id}
-                className="projectItem"
-                onClick={() => handleProjectClick(project.id)}
-              >
-                {project.name}{" "}
-                <span style={{ color: "#888" }}>
-                  ({project.project_code || project.projectCode})
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="noProjects">No projects found.</div>
-        )}
+      <h2>All Projects</h2>
+      <input
+        type="text"
+        className="search-input"
+        placeholder="Search by name or code"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {filteredProjects.length > 0 ? (
+        <ul className="projectList">
+          {filteredProjects.map((project) => (
+            <li
+              key={project.id}
+              className="projectItem"
+              onClick={() => handleProjectClick(project.id)}
+            >
+              {project.name}{" "}
+              <span style={{ color: "#888" }}>
+                ({project.project_code || project.projectCode})
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="noProjects">No projects found.</div>
+      )}
     </div>
   );
 };

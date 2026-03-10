@@ -23,10 +23,10 @@
 }
 
 .search-input {
-  margin-bottom: 16px;
+  display: block;
+  margin: 0 auto 16px auto;
   padding: 8px 12px;
   width: 100%;
-  max-width: 250px;
   border: 1px solid #ddd;
   border-radius: 6px;
   background: #ffffff;
@@ -34,6 +34,7 @@
   font-size: 14px;
   outline: none;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .search-input:focus {

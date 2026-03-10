@@ -3,9 +3,9 @@ import {
   Routes,
   Route,
   Navigate,
-  useParams,
 } from "react-router-dom";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { ToastProvider } from "./contexts/ToastContext";
 import Registration from "./components/Registration";
 import AdminPage from "./components/AdminPage";
 import DeliveryList from "./components/DiliveryList";
@@ -21,18 +21,10 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PushNotificationSubscriber from "./components/PushNotificationSubscriber";
 
-function UserPage({ email }) {
-  return <h1>Welcome, {email}!</h1>;
-}
-
-function UserPageWrapper() {
-  const { email } = useParams();
-  return <UserPage email={email} />;
-}
-
 function App() {
   return (
     <ThemeProvider>
+      <ToastProvider>
       <div className="App">
         <Router>
           <PushNotificationSubscriber />
@@ -80,7 +72,7 @@ function App() {
             <Route
               path="/delivery/:id"
               element={
-                <ProtectedRoute allowedRoles={["dev", "head_of_drivers"]}>
+                <ProtectedRoute allowedRoles={["dev", "head_driver"]}>
                   <>
                     <Navbar />
                     <Delivery />
@@ -91,7 +83,7 @@ function App() {
             <Route
               path="/deliveryRequests"
               element={
-                <ProtectedRoute allowedRoles={["head_of_drivers", "dev"]}>
+                <ProtectedRoute allowedRoles={["head_driver", "dev"]}>
                   <>
                     <Navbar />
                     <DeliveryList />
@@ -146,6 +138,7 @@ function App() {
           </Routes>
         </Router>
       </div>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

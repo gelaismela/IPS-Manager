@@ -2,8 +2,6 @@
 // - Dev (CRA): REACT_APP_API_BASE defaults to http://localhost:8080
 // - Prod (via Nginx): use "/api" so calls are same-origin and proxied
 // Support both REACT_APP_API_BASE and legacy REACT_APP_API_BASE_URL
-const ENV_BASE =
-  process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_BASE_URL;
 const isProd = process.env.NODE_ENV === "production";
 const envBaseDev =
   process.env.REACT_APP_API_BASE || process.env.REACT_APP_API_BASE_URL;
@@ -21,10 +19,10 @@ export const API_BASE =
   runtimeOverride && runtimeOverride.trim().length > 0
     ? runtimeOverride
     : isProd
-    ? "/api"
-    : envBaseDev && envBaseDev.trim().length > 0
-    ? envBaseDev
-    : "http://localhost:8080";
+      ? "/api"
+      : envBaseDev && envBaseDev.trim().length > 0
+        ? envBaseDev
+        : "http://localhost:8080";
 
 // ✅ Helper function to include JWT automatically
 export async function authFetch(url, options = {}) {
@@ -53,8 +51,8 @@ export async function authFetch(url, options = {}) {
       typeof data === "object" && data?.message
         ? data.message
         : typeof data === "string"
-        ? data
-        : `Request failed with status ${res.status}`
+          ? data
+          : `Request failed with status ${res.status}`,
     );
     error.status = res.status;
     error.response = data;
@@ -81,14 +79,16 @@ export async function login(email, password, remember = false) {
   if (data.token) {
     storage.setItem("token", data.token);
     if (data.role) {
-      storage.setItem("role", data.role);
+      let role = data.role.toLowerCase();
+      if (role === "head_of_drivers" || role === "head_of_driver") role = "head_driver";
+      storage.setItem("role", role);
       storage.setItem(
         "user",
         JSON.stringify({
-          role: data.role,
+          role: role,
           email,
           id: data.id,
-        })
+        }),
       );
     }
     if (data.id) {
@@ -148,6 +148,13 @@ export async function resetPassword(token, newPassword) {
 
 export async function getUsers() {
   return authFetch("/auth/users", { method: "GET" });
+}
+
+export async function createUser(userData) {
+  return authFetch("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
 }
 
 export async function getDrivers() {
@@ -240,6 +247,39 @@ export async function addMaterial(newMaterial) {
   });
 }
 
+export async function updateMaterial(id, data) {
+  return authFetch(`/materials/update`, {
+    method: "PUT",
+    body: JSON.stringify({ id, ...data }),
+  });
+}
+
+export async function deleteMaterial(id) {
+  return authFetch(`/materials/delete?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function createFailedRequest(payload) {
+  return authFetch("/failed-requests/create", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getFailedRequests() {
+  return authFetch("/failed-requests/all");
+}
+
+export async function acceptFailedRequest(id, overrides = {}) {
+  return authFetch(`/failed-requests/${id}/accept`, {
+    method: "PUT",
+    body: JSON.stringify(overrides),
+  });
+}
+
+export async function declineFailedRequest(id) {
+  return authFetch(`/failed-requests/${id}/decline`, { method: "PUT" });
+}
+
 // MATERIAL REQUESTS -----------------------------------
 
 // Worker creates material request
@@ -247,7 +287,7 @@ export async function addMaterial(newMaterial) {
 export async function createMaterialRequest(
   projectId,
   materialId,
-  requestedQuantity
+  requestedQuantity,
 ) {
   return authFetch("/material-requests/request", {
     method: "POST",
@@ -264,7 +304,7 @@ export async function assignMaterialRequest(
   requestId,
   driverId,
   assignedQuantity,
-  deliveryDate
+  deliveryDate,
 ) {
   return authFetch(`/material-requests/${requestId}/assign`, {
     method: "POST",
@@ -341,7 +381,7 @@ const ALLOWED_STATUSES = ["PENDING", "PARTIALLY_ASSIGNED", "ASSIGNED", "SENT"];
 export async function updateDeliveryStatus(assignmentId, status) {
   if (!ALLOWED_STATUSES.includes(status)) {
     throw new Error(
-      `Invalid status: ${status}. Allowed: ${ALLOWED_STATUSES.join(", ")}`
+      `Invalid status: ${status}. Allowed: ${ALLOWED_STATUSES.join(", ")}`,
     );
   }
   return authFetch(`/deliveries/${assignmentId}/status`, {
@@ -358,7 +398,7 @@ export async function updateDeliveryStatus(assignmentId, status) {
  * @returns {Promise<string>} VAPID public key
  */
 export async function getVapidPublicKey() {
-  return authFetch("/api/push-notifications/vapid-public-key", {
+  return authFetch("/push-notifications/vapid-public-key", {
     method: "GET",
   });
 }
@@ -369,7 +409,7 @@ export async function getVapidPublicKey() {
  * @returns {Promise} Response from server
  */
 export async function subscribeToPushNotifications(subscription) {
-  return authFetch("/api/push-notifications/subscribe", {
+  return authFetch("/push-notifications/subscribe", {
     method: "POST",
     body: JSON.stringify(subscription),
   });
@@ -381,7 +421,7 @@ export async function subscribeToPushNotifications(subscription) {
  * @returns {Promise} Response from server
  */
 export async function unsubscribeFromPushNotifications(endpoint) {
-  return authFetch("/api/push-notifications/unsubscribe", {
+  return authFetch("/push-notifications/unsubscribe", {
     method: "POST",
     body: JSON.stringify({ endpoint }),
   });
@@ -392,7 +432,7 @@ export async function unsubscribeFromPushNotifications(endpoint) {
  * @returns {Promise} Response from server
  */
 export async function sendTestNotification() {
-  return authFetch("/api/push-notifications/test", {
+  return authFetch("/push-notifications/test", {
     method: "POST",
   });
 }

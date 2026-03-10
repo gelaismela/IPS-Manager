@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { API_BASE, getProjects } from "../api/api";
 import "../styles/excelUpload.css";
+import { useToast } from "../contexts/ToastContext";
 
 const ExcelUpload = () => {
   const [uploadType, setUploadType] = useState("materials");
@@ -10,6 +11,7 @@ const ExcelUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const fileInputRef = useRef();
+  const showToast = useToast();
 
   useEffect(() => {
     // Fetch projects for project materials upload
@@ -39,12 +41,12 @@ const ExcelUpload = () => {
     e.preventDefault();
     
     if (!file) {
-      alert("Please select an Excel file.");
+      showToast("Please select an Excel file.", "warning");
       return;
     }
 
     if (uploadType === "project-materials" && !selectedProject) {
-      alert("Please select a project.");
+      showToast("Please select a project.", "warning");
       return;
     }
 
