@@ -820,8 +820,8 @@ const AdminPage = () => {
 
   if (loading) return <div className="loading">{t("admin.loading")}</div>;
 
-  // Get user role
-  const userStr = localStorage.getItem("user");
+  // Get user role (check both storages — depends on "Remember Me" at login)
+  const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
 
   const isAdmin =
@@ -2011,15 +2011,6 @@ const AdminPage = () => {
             </div>
           </section>
 
-          {/* Excel Upload */}
-          {isAdmin && (
-            <section className="upload-section">
-              <h2>
-                <span>📤</span> Excel Upload
-              </h2>
-              <ExcelUpload />
-            </section>
-          )}
         </div>
       )}
 

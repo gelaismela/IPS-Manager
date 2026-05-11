@@ -2,6 +2,7 @@ package com.IPS.IPS_Manager.Service;
 
 import com.IPS.IPS_Manager.Entity.Users;
 import com.IPS.IPS_Manager.Repository.UserRepo;
+import org.springframework.beans.factory.annotation.Value; // ✅ CORRECT
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,9 @@ public class PasswordResetService {
     @Autowired
     private JWTService jwtService;
 
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
+
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     // Step 1: Send reset link
@@ -26,8 +30,7 @@ public class PasswordResetService {
                 .orElseThrow(() -> new RuntimeException("No user with email " + mail));
 
         String token = jwtService.generateResetToken(user.getMail());
-        String resetLink = "http://localhost:3000/reset-password?token=" + token;
-        String resetLinkNew = "http://192.168.100.25:3000/reset-password?token=" + token;
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
 
         mailService.sendMail(user.getMail(),
                 "Password Reset Request",

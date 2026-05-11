@@ -40,12 +40,12 @@ function ResetPassword() {
       setLoading(true);
       await resetPassword(token, newPassword);
       setMessage(
-        "Password has been reset successfully! Redirecting to login..."
+        "Password has been reset successfully! Redirecting..."
       );
       localStorage.removeItem("authToken");
       sessionStorage.removeItem("authToken");
       setTimeout(() => {
-        navigate("/login", { state: { resetSuccess: true } });
+        navigate("/");
       }, 2000);
     } catch (err) {
       console.error(err);
