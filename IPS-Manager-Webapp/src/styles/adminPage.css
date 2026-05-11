@@ -1,15 +1,52 @@
-.admin-container {
+/* ===== PAGE WRAPPER ===== */
+.admin-page-wrapper {
+  width: 100%;
   max-width: 1200px;
   margin: 32px auto;
-  padding: 32px;
+  padding-top: 24px;
   background: #f8f9fa;
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .admin-page-wrapper {
+  background: #1a1f2e;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .failed-req-table tbody tr {
+  background: #252b3b;
+  border-color: #3a3f4e;
+}
+
+[data-theme="dark"] .mat-catalog-table tbody tr,
+[data-theme="dark"] .users-table tbody tr {
+  background: #252b3b;
+  border-color: #3a3f4e;
+}
+
+.admin-container-header {
+  padding: 0 32px;
+}
+
+.admin-title {
+  font-size: 2.2em;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #007bff;
+  letter-spacing: 1px;
+}
+
+.admin-container {
+  padding: 0 32px 32px;
   font-family: "Segoe UI", Arial, sans-serif;
+  box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 [data-theme="dark"] .admin-container {
-  background: #1a1f2e;
+  background: transparent;
 }
 
 .admin-container h1 {
@@ -45,20 +82,34 @@ section {
 }
 
 /* ===== TABS ===== */
+.admin-tabs-scroll-wrapper {
+  width: 100%;
+  max-width: 1264px;
+  margin: 0 auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0 32px;
+  box-sizing: border-box;
+}
+.admin-tabs-scroll-wrapper::-webkit-scrollbar {
+  display: none;
+}
 .admin-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 28px;
+  gap: 4px;
   border-bottom: 2px solid #dee2e6;
   padding-bottom: 0;
+  flex-wrap: nowrap;
+  min-width: max-content;
 }
 .admin-tab-btn {
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
   margin-bottom: -2px;
-  padding: 10px 22px;
-  font-size: 1em;
+  padding: 10px 18px;
+  font-size: 0.95em;
   font-weight: 600;
   color: #6c757d;
   cursor: pointer;
@@ -66,6 +117,8 @@ section {
   transition:
     color 0.15s,
     border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .admin-tab-btn:hover {
   color: #007bff;
@@ -90,8 +143,11 @@ section {
 /* ===== CATALOG TABLE ===== */
 .catalog-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: 8px;
   border: 1px solid #dee2e6;
+  max-width: 100%;
+  width: 100%;
 }
 [data-theme="dark"] .catalog-table-wrap {
   border-color: #3a3f4e;
@@ -323,7 +379,7 @@ section {
   gap: 8px;
   margin-bottom: 12px;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 .add-material-form input {
   padding: 8px 10px;
@@ -578,6 +634,33 @@ section {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.project-requests-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.project-request-group {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e3e6ea;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+[data-theme="dark"] .project-request-group {
+  background: linear-gradient(135deg, #212633 0%, #1a1f2e 100%);
+  border-color: #2d3748;
+}
+
+.project-request-group:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 123, 255, 0.12);
 }
 
 .project-delivery-group {
@@ -977,7 +1060,10 @@ section {
 .request-table-container {
   background: #ffffff;
   border-radius: 8px;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  width: 100%;
   margin-bottom: 20px;
 }
 
@@ -1080,12 +1166,65 @@ section {
   color: #007bff;
 }
 
-/* Responsive styles for mobile */
-@media (max-width: 700px) {
+/* ===== RESPONSIVE: TABLET (max-width: 1024px) ===== */
+@media (max-width: 1024px) {
   .admin-container {
-    padding: 10px;
-    max-width: 100vw;
+    padding: 20px 16px;
   }
+
+  .delivery-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  .admin-tabs {
+    gap: 4px;
+  }
+
+  .admin-tab-btn {
+    padding: 8px 16px;
+    font-size: 0.95em;
+  }
+
+  .catalog-input-wide {
+    width: 180px;
+  }
+}
+
+/* ===== RESPONSIVE: MOBILE (max-width: 768px) ===== */
+@media (max-width: 768px) {
+  .admin-page-wrapper {
+    padding-top: 8px;
+    margin: 8px;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .admin-container-header {
+    padding: 0 12px;
+  }
+
+  .admin-tabs-scroll-wrapper {
+    padding: 0 12px;
+  }
+
+  .admin-container {
+    padding: 0 12px 20px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .admin-title {
+    font-size: 1.5em;
+    margin-bottom: 12px;
+  }
+
+  /* Tabs: smaller on mobile */
+  .admin-tab-btn {
+    padding: 8px 10px;
+    font-size: 0.82em;
+  }
+
+  /* Project/request cards */
   .projects-grid,
   .requests-grid {
     flex-direction: column;
@@ -1095,40 +1234,333 @@ section {
   .request-card {
     min-width: unset;
     width: 100%;
-    padding: 16px 14px;
-    font-size: 1em;
-  }
-  .modal-content {
-    min-width: unset;
-    width: 95vw;
-    padding: 18px 8px 18px 8px;
-  }
-  .deliveries-table th,
-  .deliveries-table td {
-    padding: 7px 4px;
+    padding: 14px 12px;
     font-size: 0.97em;
   }
 
-  /* Mobile styles for new delivery cards */
+  /* Modal */
+  .modal-content {
+    min-width: unset;
+    width: 98vw !important;
+    max-width: 98vw !important;
+    padding: 16px 10px;
+    border-radius: 8px;
+  }
+  .modal-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Tables - catalog-table-wrap gets horizontal scroll (materials table) */
+  .catalog-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .catalog-table-wrap .material-edit-table {
+    min-width: 600px;
+  }
+
+  /* Failed requests table - override horizontal scroll, use accordion cards instead */
+  .catalog-table-wrap:has(.failed-req-table) {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+  }
+  .failed-req-table {
+    min-width: unset !important;
+    display: block;
+    width: 100%;
+  }
+  .failed-req-table thead {
+    display: none;
+  }
+  .failed-req-table tbody {
+    display: block;
+  }
+  .failed-req-table tbody tr {
+    display: block;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 10px 36px 10px 12px;
+    cursor: pointer;
+    position: relative;
+    background: #fff;
+  }
+  .failed-req-table tbody tr::after {
+    content: "▼";
+    position: absolute;
+    right: 12px;
+    top: 13px;
+    color: #6c757d;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  .failed-req-table tbody tr.fr-expanded::after {
+    content: "▲";
+  }
+  /* All cells hidden by default on mobile */
+  .failed-req-table td {
+    display: none;
+    padding: 3px 0;
+    border: none;
+    font-size: 13px;
+    text-align: left !important;
+  }
+  .failed-req-table td::before {
+    content: attr(data-label) ": ";
+    font-weight: 700;
+    color: #6c757d;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-right: 4px;
+  }
+  /* Key cells always visible */
+  .failed-req-table td.fr-type,
+  .failed-req-table td.fr-material,
+  .failed-req-table td.fr-status,
+  .failed-req-table td.fr-action {
+    display: block;
+  }
+  .failed-req-table td.fr-action::before {
+    content: none;
+  }
+  /* All cells visible when row is expanded */
+  .failed-req-table tbody tr.fr-expanded td {
+    display: block;
+  }
+
+  /* Materials catalog table - accordion cards */
+  .catalog-table-wrap:has(.mat-catalog-table) {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+  }
+  .mat-catalog-table {
+    min-width: unset !important;
+    display: block;
+    width: 100%;
+  }
+  .mat-catalog-table thead { display: none; }
+  .mat-catalog-table tbody { display: block; }
+  .mat-catalog-table tbody tr {
+    display: block;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 10px 36px 10px 12px;
+    cursor: pointer;
+    position: relative;
+    background: #fff;
+  }
+  .mat-catalog-table tbody tr.editing-row { cursor: default; }
+  .mat-catalog-table tbody tr::after {
+    content: "▼";
+    position: absolute;
+    right: 12px;
+    top: 13px;
+    color: #6c757d;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  .mat-catalog-table tbody tr.editing-row::after { content: none; }
+  .mat-catalog-table tbody tr.mat-expanded::after { content: "▲"; }
+  .mat-catalog-table td {
+    display: none;
+    padding: 3px 0;
+    border: none;
+    font-size: 13px;
+    text-align: left !important;
+  }
+  .mat-catalog-table td::before {
+    content: attr(data-label) ": ";
+    font-weight: 700;
+    color: #6c757d;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-right: 4px;
+  }
+  .mat-catalog-table td.mat-code,
+  .mat-catalog-table td.mat-name,
+  .mat-catalog-table td.mat-actions { display: block; }
+  .mat-catalog-table td.mat-actions { padding-top: 6px; }
+  .mat-catalog-table td.mat-actions::before { content: none; }
+  .mat-catalog-table tbody tr.mat-expanded td { display: block; }
+  .mat-catalog-table tbody tr.editing-row td { display: block; }
+  .mat-catalog-table tbody tr.editing-row td:last-child { display: flex; }
+
+  /* Users table - accordion cards */
+  .catalog-table-wrap:has(.users-table) {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+  }
+  .users-table {
+    min-width: unset !important;
+    display: block;
+    width: 100%;
+  }
+  .users-table thead { display: none; }
+  .users-table tbody { display: block; }
+  .users-table tbody tr {
+    display: block;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 10px 36px 10px 12px;
+    cursor: pointer;
+    position: relative;
+    background: #fff;
+  }
+  .users-table tbody tr::after {
+    content: "▼";
+    position: absolute;
+    right: 12px;
+    top: 13px;
+    color: #6c757d;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  .users-table tbody tr.u-expanded::after { content: "▲"; }
+  .users-table td {
+    display: none;
+    padding: 3px 0;
+    border: none;
+    font-size: 13px;
+    text-align: left !important;
+  }
+  .users-table td::before {
+    content: attr(data-label) ": ";
+    font-weight: 700;
+    color: #6c757d;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-right: 4px;
+  }
+  .users-table td.u-name,
+  .users-table td.u-role { display: block; }
+  .users-table tbody tr.u-expanded td { display: block; }
+
+  /* Add catalog material form: stack vertically */
+  .add-catalog-material-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .catalog-input,
+  .catalog-input-wide {
+    width: 100% !important;
+  }
+
+  /* Add material form in project edit modal */
+  .add-material-form {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .add-material-form input {
+    width: calc(50% - 4px);
+    flex: 1 1 calc(50% - 4px);
+  }
+  .autocomplete-container {
+    min-width: unset;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  /* Admin search input */
+  .admin-search-input {
+    max-width: 100%;
+  }
+
+  /* Old deliveries table */
+  .deliveries-table th,
+  .deliveries-table td {
+    padding: 7px 4px;
+    font-size: 0.9em;
+  }
+
+  /* Delivery cards */
   .delivery-cards-grid {
     grid-template-columns: 1fr;
   }
-
   .project-delivery-group {
-    padding: 16px;
+    padding: 12px 10px;
   }
 
+  /* Project header: stack vertically */
   .project-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
+  }
+  .project-header h3 {
+    font-size: 1.1em;
+    flex-wrap: wrap;
+  }
+  .project-header > div {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .delivery-count-badge {
+    align-self: flex-start;
   }
 
-  .project-header h3 {
+  /* Material delivery section */
+  .material-delivery-section {
+    padding: 12px 10px;
+  }
+  .info-row {
+    font-size: 0.88em;
+  }
+
+  /* Request group */
+  .project-request-group {
+    padding: 12px 10px;
+  }
+  .request-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .request-table-container .material-table {
+    min-width: 360px;
+  }
+
+  /* Users tab form */
+  .materials-tab form[style] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Status filter buttons wrapping */
+  section > div[style*="flexWrap"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Section headings */
+  .projects-section h2,
+  .deliveries-section h2,
+  .requests-section h2,
+  .upload-section h2 {
     font-size: 1.2em;
   }
 
-  .delivery-count-badge {
-    align-self: flex-start;
+  /* Buttons in project cards */
+  .project-card > div[style*="display: flex"] {
+    flex-wrap: wrap;
+  }
+  .edit-btn {
+    font-size: 0.88em;
+    padding: 5px 12px;
+  }
+
+  /* Disable all transform hover effects — prevents wobble on touch */
+  .project-card:hover,
+  .request-card:hover,
+  .project-delivery-group:hover,
+  .project-request-group:hover,
+  .delivery-card-admin:hover,
+  .mark-sent-btn:hover {
+    transform: none;
   }
 }

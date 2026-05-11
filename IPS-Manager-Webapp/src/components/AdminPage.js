@@ -88,6 +88,9 @@ const AdminPage = () => {
   // Accept modal
   const [acceptModal, setAcceptModal] = useState(null); // the FailedRequest being accepted
   const [acceptOverride, setAcceptOverride] = useState({ driverId: "", deliveryDate: "" });
+  const [expandedFailedRows, setExpandedFailedRows] = useState(new Set());
+  const [expandedMatRows, setExpandedMatRows] = useState(new Set());
+  const [expandedUserRows, setExpandedUserRows] = useState(new Set());
   const [modalDrivers, setModalDrivers] = useState([]);
   const [modalDriversLoading, setModalDriversLoading] = useState(false);
 
@@ -728,6 +731,33 @@ const AdminPage = () => {
     }
   };
 
+  const toggleFailedRow = (id) => {
+    setExpandedFailedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleMatRow = (id) => {
+    setExpandedMatRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleUserRow = (id) => {
+    setExpandedUserRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const handleDeclineFailed = async (id) => {
     setProcessingFailedId(id);
     try {
@@ -806,37 +836,42 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="admin-container">
-      <h1>{isAdmin ? t("admin.title") : t("admin.projects")}</h1>
-
-      {/* Tab navigation */}
-      <div className="admin-tabs">
-        <button
-          className={`admin-tab-btn${activeTab === "projects" ? " active" : ""}`}
-          onClick={() => setActiveTab("projects")}
-        >
-          🏢 Projects
-        </button>
-        <button
-          className={`admin-tab-btn${activeTab === "materials" ? " active" : ""}`}
-          onClick={() => setActiveTab("materials")}
-        >
-          🧱 Materials
-        </button>
-        <button
-          className={`admin-tab-btn${activeTab === "users" ? " active" : ""}`}
-          onClick={() => setActiveTab("users")}
-        >
-          👥 Users
-        </button>
-        <button
-          className={`admin-tab-btn${activeTab === "failed" ? " active" : ""}`}
-          onClick={() => setActiveTab("failed")}
-        >
-          ❌ Failed Requests
-        </button>
+    <div className="admin-page-wrapper">
+      <div className="admin-container-header">
+        <h1 className="admin-title">{isAdmin ? t("admin.title") : t("admin.projects")}</h1>
       </div>
 
+      {/* Tab navigation - outside overflow:hidden container so it can scroll independently */}
+      <div className="admin-tabs-scroll-wrapper">
+        <div className="admin-tabs">
+          <button
+            className={`admin-tab-btn${activeTab === "projects" ? " active" : ""}`}
+            onClick={() => setActiveTab("projects")}
+          >
+            🏢 Projects
+          </button>
+          <button
+            className={`admin-tab-btn${activeTab === "materials" ? " active" : ""}`}
+            onClick={() => setActiveTab("materials")}
+          >
+            🧱 Materials
+          </button>
+          <button
+            className={`admin-tab-btn${activeTab === "users" ? " active" : ""}`}
+            onClick={() => setActiveTab("users")}
+          >
+            👥 Users
+          </button>
+          <button
+            className={`admin-tab-btn${activeTab === "failed" ? " active" : ""}`}
+            onClick={() => setActiveTab("failed")}
+          >
+            ❌ Failed Requests
+          </button>
+        </div>
+      </div>
+
+      <div className="admin-container">
       {activeTab === "projects" && (
         <>
           <section className="projects-section">
@@ -1796,7 +1831,7 @@ const AdminPage = () => {
             />
 
             <div className="catalog-table-wrap">
-              <table className="material-edit-table">
+              <table className="material-edit-table mat-catalog-table">
                 <thead>
                   <tr>
                     <th style={{ width: "140px" }}>Code</th>
@@ -1898,14 +1933,19 @@ const AdminPage = () => {
                               </td>
                             </tr>
                           ) : (
-                            <tr key={m.id}>
-                              <td style={{ color: "#6c757d", fontWeight: 500 }}>
+                            <tr
+                              key={m.id}
+                              onClick={() => toggleMatRow(m.id)}
+                              className={expandedMatRows.has(m.id) ? "mat-expanded" : ""}
+                            >
+                              <td className="mat-code" data-label="Code" style={{ color: "#6c757d", fontWeight: 500 }}>
                                 {m.id}
                               </td>
-                              <td style={{ fontWeight: 600 }}>{m.name}</td>
-                              <td>{m.unit || "—"}</td>
-                              <td>{m.quantity ?? "—"}</td>
+                              <td className="mat-name" data-label="Name" style={{ fontWeight: 600 }}>{m.name}</td>
+                              <td className="mat-unit" data-label="Unit">{m.unit || "—"}</td>
+                              <td className="mat-qty" data-label="Qty">{m.quantity ?? "—"}</td>
                               <td
+                                className="mat-actions"
                                 style={{
                                   textAlign: "center",
                                   display: "flex",
@@ -1919,14 +1959,15 @@ const AdminPage = () => {
                                     padding: "4px 10px",
                                     fontSize: "0.82em",
                                   }}
-                                  onClick={() =>
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setEditingMaterial({
                                       id: m.id,
                                       name: m.name,
                                       unit: m.unit || "",
                                       quantity: m.quantity ?? "",
-                                    })
-                                  }
+                                    });
+                                  }}
                                 >
                                   ✏️
                                 </button>
@@ -1934,9 +1975,10 @@ const AdminPage = () => {
                                   <button
                                     className="remove-btn"
                                     style={{ padding: "4px 10px" }}
-                                    onClick={() =>
-                                      handleDeleteCatalogMaterial(m.id)
-                                    }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteCatalogMaterial(m.id);
+                                    }}
                                   >
                                     🗑️
                                   </button>
@@ -2035,7 +2077,7 @@ const AdminPage = () => {
                 <p style={{ color: "#6c757d", padding: "16px 0" }}>No {failedFilter === "ALL" ? "" : failedFilter.toLowerCase() + " "}requests found.</p>
               ) : (
                 <div className="catalog-table-wrap">
-                  <table className="material-edit-table">
+                  <table className="material-edit-table failed-req-table">
                     <thead>
                       <tr>
                         <th style={{ width: "50px" }}>ID</th>
@@ -2057,9 +2099,13 @@ const AdminPage = () => {
                         const isPending = frStatus === "PENDING";
                         const isProcessing = processingFailedId === fr.id;
                         return (
-                          <tr key={fr.id}>
-                            <td style={{ color: "#6c757d" }}>{fr.id}</td>
-                            <td>
+                          <tr
+                            key={fr.id}
+                            onClick={() => toggleFailedRow(fr.id)}
+                            className={expandedFailedRows.has(fr.id) ? "fr-expanded" : ""}
+                          >
+                            <td data-label="ID" style={{ color: "#6c757d" }}>{fr.id}</td>
+                            <td className="fr-type" data-label="Type">
                               <span
                                 style={{
                                   display: "inline-block",
@@ -2074,16 +2120,16 @@ const AdminPage = () => {
                                 {fr.type === "STOCK_SHORTAGE" ? "Stock Shortage" : "Quota Exceeded"}
                               </span>
                             </td>
-                            <td style={{ fontWeight: 500 }}>{fr.materialId || "—"}</td>
-                            <td style={{ textAlign: "center" }}>{fr.requestedQuantity ?? "—"}</td>
-                            <td style={{ textAlign: "center" }}>{fr.availableQuantity ?? "—"}</td>
-                            <td style={{ textAlign: "center", color: "#6c757d" }}>{fr.driverId ?? "—"}</td>
-                            <td style={{ textAlign: "center", color: "#6c757d" }}>{fr.projectId ?? "—"}</td>
-                            <td style={{ color: "#6c757d" }}>{fr.deliveryDate || "—"}</td>
-                            <td style={{ color: "#6c757d", fontSize: "12px" }}>
+                            <td className="fr-material" data-label="Material" style={{ fontWeight: 500 }}>{fr.materialId || "—"}</td>
+                            <td data-label="Requested" style={{ textAlign: "center" }}>{fr.requestedQuantity ?? "—"}</td>
+                            <td data-label="Available" style={{ textAlign: "center" }}>{fr.availableQuantity ?? "—"}</td>
+                            <td data-label="Driver" style={{ textAlign: "center", color: "#6c757d" }}>{fr.driverId ?? "—"}</td>
+                            <td data-label="Project" style={{ textAlign: "center", color: "#6c757d" }}>{fr.projectId ?? "—"}</td>
+                            <td data-label="Delivery Date" style={{ color: "#6c757d" }}>{fr.deliveryDate || "—"}</td>
+                            <td data-label="Created At" style={{ color: "#6c757d", fontSize: "12px" }}>
                               {fr.createdAt ? new Date(fr.createdAt).toLocaleString() : "—"}
                             </td>
-                            <td>
+                            <td className="fr-status" data-label="Status">
                               <span
                                 style={{
                                   display: "inline-block",
@@ -2102,11 +2148,11 @@ const AdminPage = () => {
                                 {frStatus.charAt(0) + frStatus.slice(1).toLowerCase()}
                               </span>
                             </td>
-                            <td>
+                            <td className="fr-action">
                               {isPending ? (
                                 <div style={{ display: "flex", gap: "6px" }}>
                                   <button
-                                    onClick={() => openAcceptModal(fr)}
+                                    onClick={(e) => { e.stopPropagation(); openAcceptModal(fr); }}
                                     disabled={isProcessing}
                                     style={{
                                       padding: "4px 10px",
@@ -2122,7 +2168,7 @@ const AdminPage = () => {
                                     {isProcessing ? "..." : "✔ Accept"}
                                   </button>
                                   <button
-                                    onClick={() => handleDeclineFailed(fr.id)}
+                                    onClick={(e) => { e.stopPropagation(); handleDeclineFailed(fr.id); }}
                                     disabled={isProcessing}
                                     style={{
                                       padding: "4px 10px",
@@ -2285,7 +2331,7 @@ const AdminPage = () => {
             )}
 
             <div className="catalog-table-wrap">
-              <table className="material-edit-table">
+              <table className="material-edit-table users-table">
                 <thead>
                   <tr>
                     <th style={{ width: "50px" }}>ID</th>
@@ -2303,18 +2349,22 @@ const AdminPage = () => {
                       return (u.name || "").toLowerCase().includes(q) || (u.mail || "").toLowerCase().includes(q);
                     })
                     .map((u) => (
-                      <tr key={u.id}>
-                        <td style={{ color: "#6c757d" }}>{u.id}</td>
-                        <td style={{ fontWeight: 600 }}>{u.name}</td>
-                        <td>{u.mail}</td>
-                        <td>
+                      <tr
+                        key={u.id}
+                        onClick={() => toggleUserRow(u.id)}
+                        className={expandedUserRows.has(u.id) ? "u-expanded" : ""}
+                      >
+                        <td className="u-id" data-label="ID" style={{ color: "#6c757d" }}>{u.id}</td>
+                        <td className="u-name" data-label="Name" style={{ fontWeight: 600 }}>{u.name}</td>
+                        <td className="u-email" data-label="Email">{u.mail}</td>
+                        <td className="u-role" data-label="Role">
                           <span
                             className={`role-badge role-${(u.role || "").replace(/_/g, "-")}`}
                           >
                             {u.role || "—"}
                           </span>
                         </td>
-                        <td>{u.phone || "—"}</td>
+                        <td className="u-phone" data-label="Phone">{u.phone || "—"}</td>
                       </tr>
                     ))}
                 </tbody>
@@ -2439,6 +2489,7 @@ const AdminPage = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
