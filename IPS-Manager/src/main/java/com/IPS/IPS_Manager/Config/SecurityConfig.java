@@ -83,7 +83,12 @@ public class SecurityConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOriginPatterns("http://185.221.*.*", "http://localhost:*")
+                        .allowedOriginPatterns(
+                                "http://185.221.*.*",
+                                "http://localhost:*",
+                                "https://ipsmanager.ge",
+                                "https://www.ipsmanager.ge"
+                        )
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);

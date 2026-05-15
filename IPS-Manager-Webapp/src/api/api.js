@@ -188,6 +188,29 @@ export async function addProjectWithMaterials(request) {
   });
 }
 
+export async function uploadProjectsExcel(file) {
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_BASE}/excel/upload-projects`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text; }
+  if (!res.ok) {
+    const error = new Error(
+      typeof data === "object" && data?.message ? data.message : typeof data === "string" ? data : `Upload failed with status ${res.status}`
+    );
+    error.status = res.status;
+    throw error;
+  }
+  return data;
+}
+
 export async function getMaterialsByProject(projectId) {
   return authFetch(`/projects/${projectId}/materials`, { method: "GET" });
 }

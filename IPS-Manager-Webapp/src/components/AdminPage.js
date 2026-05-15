@@ -21,6 +21,8 @@ import {
   acceptFailedRequest,
   declineFailedRequest,
   getDrivers,
+  addProject,
+  uploadProjectsExcel,
 } from "../api/api";
 import "../styles/adminPage.css";
 import ExcelUpload from "./ExcelUpload";
@@ -57,6 +59,7 @@ const AdminPage = () => {
   const [search, setSearch] = useState("");
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const excelInputRef = useRef(null);
+  const projectExcelInputRef = useRef(null);
 
   // Tab navigation
   const [activeTab, setActiveTab] = useState("projects");
@@ -93,6 +96,13 @@ const AdminPage = () => {
   const [expandedUserRows, setExpandedUserRows] = useState(new Set());
   const [modalDrivers, setModalDrivers] = useState([]);
   const [modalDriversLoading, setModalDriversLoading] = useState(false);
+
+  // Add Project modal
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [newProject, setNewProject] = useState({ name: "", projectCode: "", address: "" });
+  const [addingProject, setAddingProject] = useState(false);
+  const [addProjectError, setAddProjectError] = useState("");
+  const [projectImportMode, setProjectImportMode] = useState("manual"); // "manual" | "excel"
 
   useEffect(() => {
     const fetchData = async () => {
@@ -215,6 +225,45 @@ const AdminPage = () => {
         quantity: matQty,
       };
     });
+  };
+
+  const handleAddProject = async () => {
+    if (!newProject.name.trim() || !newProject.projectCode.trim()) {
+      setAddProjectError("Project name and code are required.");
+      return;
+    }
+    setAddingProject(true);
+    setAddProjectError("");
+    try {
+      const created = await addProject({
+        name: newProject.name.trim(),
+        projectCode: newProject.projectCode.trim(),
+        address: newProject.address.trim() || undefined,
+      });
+      setProjects((prev) => [...prev, created]);
+      setShowAddProjectModal(false);
+      setNewProject({ name: "", projectCode: "", address: "" });
+      showToast("Project created successfully.", "success");
+    } catch (err) {
+      setAddProjectError(err.message || "Failed to create project.");
+    } finally {
+      setAddingProject(false);
+    }
+  };
+
+  const handleProjectExcelImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+    try {
+      await uploadProjectsExcel(file);
+      showToast("Projects imported successfully.", "success");
+      // Refresh projects list
+      const updated = await getProjects();
+      setProjects(updated);
+    } catch (err) {
+      showToast(err.message || "Failed to import projects.", "error");
+    }
   };
 
   const handleEditProject = async (project) => {
@@ -879,13 +928,25 @@ const AdminPage = () => {
               <span>🏢</span>
               {t("admin.projects")}
             </h2>
-            <input
-              type="text"
-              placeholder="Search by name or Project Code"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="admin-search-input"
-            />
+            <div style={{ display: "flex", gap: "10px", marginBottom: "12px", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="Search by name or Project Code"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="admin-search-input"
+                style={{ flex: 1, marginBottom: 0 }}
+              />
+              {isAdmin && (
+                <button
+                  className="edit-btn"
+                  style={{ background: "#007bff", whiteSpace: "nowrap" }}
+                  onClick={() => { setShowAddProjectModal(true); setAddProjectError(""); setNewProject({ name: "", projectCode: "", address: "" }); setProjectImportMode("manual"); }}
+                >
+                  + Add Project
+                </button>
+              )}
+            </div>
             <div className="projects-grid">
               {filteredProjects.map((project) => (
                 <div key={project.id} className="project-card">
@@ -1215,6 +1276,180 @@ const AdminPage = () => {
                     Close
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Project Modal */}
+          {showAddProjectModal && (
+            <div className="edit-modal">
+              <div className="modal-content" style={{ maxWidth: "460px", width: "90%", padding: "28px 32px" }}>
+
+                {/* Header */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                  <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Add New Project</h2>
+                  <button
+                    onClick={() => setShowAddProjectModal(false)}
+                    style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", color: "#6c757d", lineHeight: 1, padding: "0 4px" }}
+                    aria-label="Close"
+                  >×</button>
+                </div>
+
+                {/* Tab switcher */}
+                <div style={{ display: "flex", background: "var(--tab-bg, #f1f3f5)", borderRadius: "8px", padding: "4px", marginBottom: "24px", gap: "4px" }}>
+                  {["manual", "excel"].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setProjectImportMode(mode)}
+                      style={{
+                        flex: 1,
+                        padding: "7px 0",
+                        border: "none",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontWeight: 500,
+                        fontSize: "0.875rem",
+                        transition: "background 0.15s, box-shadow 0.15s",
+                        background: projectImportMode === mode ? "#fff" : "transparent",
+                        color: projectImportMode === mode ? "#1a202c" : "#6c757d",
+                        boxShadow: projectImportMode === mode ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                      }}
+                    >
+                      {mode === "manual" ? "✏️ Manual" : "📂 Import Excel"}
+                    </button>
+                  ))}
+                </div>
+
+                {projectImportMode === "manual" ? (
+                  <>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                      {[
+                        { key: "projectCode", label: "Project Code", placeholder: "e.g. P-2024-001", required: true },
+                        { key: "name",        label: "Project Name", placeholder: "e.g. Building Renovation", required: true },
+                        { key: "address",     label: "Address",      placeholder: "e.g. 15 Rustaveli Ave, Tbilisi", required: false },
+                      ].map(({ key, label, placeholder, required }) => (
+                        <div key={key}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: 600, marginBottom: "5px", color: "var(--label-color, #495057)", letterSpacing: "0.02em" }}>
+                            {label}{required && <span style={{ color: "#dc3545", marginLeft: "2px" }}>*</span>}
+                          </div>
+                          <input
+                            type="text"
+                            className="admin-search-input"
+                            style={{ width: "100%", boxSizing: "border-box", margin: 0 }}
+                            placeholder={placeholder}
+                            value={newProject[key]}
+                            onChange={(e) => setNewProject((p) => ({ ...p, [key]: e.target.value }))}
+                          />
+                        </div>
+                      ))}
+                      {addProjectError && (
+                        <p style={{ color: "#dc3545", margin: 0, fontSize: "0.875rem" }}>{addProjectError}</p>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
+                      <button
+                        className="edit-btn"
+                        style={{ flex: 1, background: "#007bff" }}
+                        onClick={handleAddProject}
+                        disabled={addingProject}
+                      >
+                        {addingProject ? "Creating..." : "Create Project"}
+                      </button>
+                      <button
+                        className="cancel-btn"
+                        style={{ flex: 1 }}
+                        onClick={() => setShowAddProjectModal(false)}
+                        disabled={addingProject}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      ref={projectExcelInputRef}
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      style={{ display: "none" }}
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        e.target.value = "";
+                        setAddingProject(true);
+                        setAddProjectError("");
+                        try {
+                          await uploadProjectsExcel(file);
+                          const updated = await getProjects();
+                          setProjects(updated);
+                          setShowAddProjectModal(false);
+                          showToast("Projects imported successfully.", "success");
+                        } catch (err) {
+                          setAddProjectError(err.message || "Import failed.");
+                        } finally {
+                          setAddingProject(false);
+                        }
+                      }}
+                    />
+
+                    {/* Drop zone */}
+                    <div
+                      onClick={() => !addingProject && projectExcelInputRef.current?.click()}
+                      style={{
+                        border: "2px dashed #ced4da",
+                        borderRadius: "10px",
+                        padding: "32px 20px",
+                        textAlign: "center",
+                        cursor: addingProject ? "default" : "pointer",
+                        transition: "border-color 0.15s",
+                        marginBottom: "14px",
+                      }}
+                      onMouseEnter={(e) => { if (!addingProject) e.currentTarget.style.borderColor = "#007bff"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#ced4da"; }}
+                    >
+                      <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📂</div>
+                      <div style={{ fontWeight: 600, marginBottom: "4px" }}>
+                        {addingProject ? "Importing..." : "Click to choose a file"}
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: "#6c757d" }}>
+                        .xlsx, .xls or .csv
+                      </div>
+                    </div>
+
+                    <p style={{ fontSize: "0.8rem", color: "#6c757d", margin: "0 0 14px", lineHeight: 1.5 }}>
+                      Required columns: <strong>projectCode</strong>, <strong>name</strong> — Optional: <strong>address</strong>
+                    </p>
+
+                    {addProjectError && (
+                      <p style={{ color: "#dc3545", fontSize: "0.875rem", margin: "0 0 12px" }}>{addProjectError}</p>
+                    )}
+
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <button
+                        className="excel-import-btn"
+                        style={{ flex: 1 }}
+                        onClick={() => {
+                          const csv = "projectCode,name,address\nP-2024-001,Building Renovation,15 Rustaveli Ave\nP-2024-002,Road Construction,";
+                          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                          const a = document.createElement("a");
+                          a.href = URL.createObjectURL(blob);
+                          a.download = "projects-template.csv";
+                          a.click();
+                        }}
+                      >
+                        📥 Template
+                      </button>
+                      <button
+                        className="cancel-btn"
+                        style={{ flex: 1 }}
+                        onClick={() => setShowAddProjectModal(false)}
+                        disabled={addingProject}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

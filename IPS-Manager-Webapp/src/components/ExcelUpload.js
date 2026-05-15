@@ -106,6 +106,8 @@ const ExcelUpload = () => {
         return "/excel/upload-users";
       case "project-materials":
         return "/excel/upload-project-materials";
+      case "projects":
+        return "/excel/upload-projects";
       default:
         return "/excel/upload";
     }
@@ -123,6 +125,9 @@ const ExcelUpload = () => {
         break;
       case "project-materials":
         csvContent = "კოდი,დასახელება,საზომი,საპროექტო\nALT-ZN-32-RAL,კრონშტეინი КР-Н-100/95/80/2,ც,600";
+        break;
+      case "projects":
+        csvContent = "name,projectCode\nBuilding Renovation,P-2024-001\nRoad Construction,P-2024-002";
         break;
       default:
         return;
@@ -144,6 +149,7 @@ const ExcelUpload = () => {
         <select value={uploadType} onChange={(e) => setUploadType(e.target.value)}>
           <option value="materials">Materials</option>
           <option value="users">Users</option>
+          <option value="projects">Projects</option>
           <option value="project-materials">Project Materials</option>
         </select>
       </div>
