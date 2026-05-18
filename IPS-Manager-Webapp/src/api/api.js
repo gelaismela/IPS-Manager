@@ -78,19 +78,34 @@ export async function login(email, password, remember = false) {
 
   if (data.token) {
     storage.setItem("token", data.token);
-    if (data.role) {
-      let role = data.role.toLowerCase();
+    // roles is now an array e.g. ["ADMIN", "PROJECT_MANAGER"]
+    const rawRoles = Array.isArray(data.roles)
+      ? data.roles
+      : data.role
+        ? [data.role]
+        : [];
+    const normalizedRoles = rawRoles.map((r) => {
+      let role = r.toLowerCase();
       if (role === "head_of_drivers" || role === "head_of_driver") role = "head_driver";
-      storage.setItem("role", role);
-      storage.setItem(
-        "user",
-        JSON.stringify({
-          role: role,
-          email,
-          id: data.id,
-        }),
-      );
-    }
+      return role;
+    });
+    // Priority order for primary role display
+    const PRIORITY = ["admin", "project_manager", "head_driver", "driver", "worker"];
+    const primaryRole =
+      PRIORITY.find((p) => normalizedRoles.includes(p)) ||
+      normalizedRoles[0] ||
+      "";
+    storage.setItem("role", primaryRole);
+    storage.setItem("roles", JSON.stringify(normalizedRoles));
+    storage.setItem(
+      "user",
+      JSON.stringify({
+        role: primaryRole,
+        roles: normalizedRoles,
+        email,
+        id: data.id,
+      }),
+    );
     if (data.id) {
       storage.setItem("userId", data.id);
     }
@@ -99,15 +114,16 @@ export async function login(email, password, remember = false) {
   return data;
 }
 
-// Get user info by email (uses existing /auth/users endpoint)
+// Get user info by email
 export async function getUserByEmail(email) {
   const users = await authFetch("/auth/users", { method: "GET" });
   return users.find((user) => user.mail === email);
 }
 
-// Get current logged-in user info
-export async function getCurrentUser(email) {
-  return getUserByEmail(email);
+// Get current logged-in user profile
+export async function getCurrentUser() {
+  const userId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+  return authFetch(`/auth/users/${userId}`, { method: "GET" });
 }
 
 export function logout() {
@@ -155,6 +171,17 @@ export async function createUser(userData) {
     method: "POST",
     body: JSON.stringify(userData),
   });
+}
+
+export async function updateUser(id, data) {
+  return authFetch(`/auth/user/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteUser(id) {
+  return authFetch(`/auth/${id}`, { method: "DELETE" });
 }
 
 export async function getDrivers() {
@@ -322,7 +349,7 @@ export async function createMaterialRequest(
   });
 }
 
-// Head/Warehouse assigns driver + quantity
+// Assign driver to a material request (creates a delivery assignment)
 export async function assignMaterialRequest(
   requestId,
   driverId,
@@ -334,7 +361,7 @@ export async function assignMaterialRequest(
     body: JSON.stringify({
       driverId,
       assignedQuantity,
-      deliveryDate, // e.g. "2025-09-29"
+      deliveryDate,
     }),
   });
 }
@@ -378,10 +405,10 @@ export async function getMyProjectRequests() {
 
 // DELIVERIES -----------------------------------
 
-export async function createDelivery(deliveryData) {
-  return authFetch("/deliveries/create", {
+export async function createDelivery({ requestId, driverId, assignedQty, date }) {
+  return authFetch(`/material-requests/${requestId}/assign`, {
     method: "POST",
-    body: JSON.stringify(deliveryData),
+    body: JSON.stringify({ driverId, assignedQuantity: assignedQty, deliveryDate: date }),
   });
 }
 
@@ -393,14 +420,14 @@ export async function getDeliveriesByDriver(driverId) {
   return authFetch(`/deliveries/driver/${driverId}`, { method: "GET" });
 }
 
-// Get all deliveries (for notifications and monitoring)
+// Get all historical delivery assignments
 export async function getAllDeliveries() {
   return authFetch("/material-requests/all", { method: "GET" });
 }
 
 const ALLOWED_STATUSES = ["PENDING", "PARTIALLY_ASSIGNED", "ASSIGNED", "SENT"];
 
-// Update delivery status
+// Update delivery status via query parameter
 export async function updateDeliveryStatus(assignmentId, status) {
   if (!ALLOWED_STATUSES.includes(status)) {
     throw new Error(
@@ -409,9 +436,116 @@ export async function updateDeliveryStatus(assignmentId, status) {
   }
   return authFetch(`/deliveries/${assignmentId}/status`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
   });
+}
+
+// PHOTOS -----------------------------------
+
+/**
+ * Upload a delivery confirmation photo (BLOB stored in DB)
+ * @param {number} assignmentId - The delivery assignment ID
+ * @param {File} file - The image file to upload
+ * @returns {Promise<{ success: boolean, message: string, photoId: number }>}
+ */
+export async function uploadDeliveryPhoto(assignmentId, file) {
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(
+    `${API_BASE}/photos/upload/delivery/${assignmentId}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    },
+  );
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text; }
+  if (!res.ok) {
+    const error = new Error(
+      typeof data === "object" && data?.message ? data.message : `Upload failed with status ${res.status}`
+    );
+    error.status = res.status;
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * Get the URL to display a stored photo — pass directly to <img src="..."> 
+ * @param {number} photoId
+ * @returns {string}
+ */
+export function getPhotoUrl(photoId) {
+  return `${API_BASE}/photos/view/${photoId}`;
+}
+
+// BATCHES -----------------------------------
+
+/**
+ * Create a new dispatch batch (materials selected, no driver yet)
+ * @param {number} projectId
+ * @param {Array<{materialId, materialName, materialCode, unit, quantity, requestIds}>} materials
+ */
+export async function createBatch(projectId, materials) {
+  return authFetch("/batches", {
+    method: "POST",
+    body: JSON.stringify({ projectId, materials }),
+  });
+}
+
+/** Get all batches (pending and assigned) */
+export async function getAllBatches() {
+  return authFetch("/batches", { method: "GET" });
+}
+
+/**
+ * Assign a driver and delivery date to an existing batch
+ * @param {number} batchId
+ * @param {number} driverId
+ * @param {string|undefined} deliveryDate  ISO date string or undefined
+ */
+export async function assignBatch(batchId, driverId, deliveryDate) {
+  return authFetch(`/batches/${batchId}/assign`, {
+    method: "PUT",
+    body: JSON.stringify({ driverId, deliveryDate }),
+  });
+}
+
+/** Delete / cancel a batch */
+export async function deleteBatch(batchId) {
+  return authFetch(`/batches/${batchId}`, { method: "DELETE" });
+}
+
+/**
+ * Fetch photo metadata list for a delivery assignment
+ */
+export async function getDeliveryPhotos(assignmentId) {
+  return authFetch(`/photos/deliveries/${assignmentId}/photos`, { method: "GET" });
+}
+
+/**
+ * Fetch a photo as an authenticated blob URL (needed because <img> can't send JWT headers)
+ */
+export async function getPhotoBlob(photoId) {
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
+  const res = await fetch(`${API_BASE}/photos/view/${photoId}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Photo load failed: ${res.status}`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+/**
+ * Delete a delivery assignment by ID
+ */
+export async function deleteDelivery(assignmentId) {
+  return authFetch(`/deliveries/${assignmentId}`, { method: "DELETE" });
 }
 
 // PUSH NOTIFICATIONS -----------------------------------

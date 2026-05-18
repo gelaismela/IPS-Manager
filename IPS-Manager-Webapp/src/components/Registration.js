@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; // react-router
 import "../styles/registration.css";
 import { login } from "../api/api";
+import { getHomeForRole, setStoredActiveRole } from "../hooks/useActiveRole";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -21,11 +22,7 @@ function Login() {
     const role = localStorage.getItem("role") || sessionStorage.getItem("role");
 
     if (token && role) {
-      if (role === "driver") navigate("/driver-deliveries");
-      else if (role === "project_manager") navigate("/projects");
-      else if (role === "head_driver") navigate("/deliveryRequests");
-      else if (role === "dev" || role === "admin") navigate("/admin");
-      else navigate("/projects");
+      navigate(getHomeForRole(role));
     }
   }, [navigate]);
 
@@ -59,27 +56,16 @@ function Login() {
       // 🔑 call backend API with remember preference
       const response = await login(email, password, remember);
 
-      // Normalize role to match frontend conventions
-      const { token } = response;
-      let role = (response.role || "").toLowerCase();
-      if (role === "head_of_drivers" || role === "head_of_driver") role = "head_driver";
+      // Primary role is already stored and normalized by api.js login()
+      const storage = localStorage.getItem("token") ? localStorage : sessionStorage;
+      const primaryRole = storage.getItem("role") || "";
+      setStoredActiveRole(primaryRole);
 
       setSuccess(true);
 
-      // Redirect after short delay
-      setTimeout(async () => {
-        // Route based on role
-        if (role === "driver") {
-          navigate("/driver-deliveries");
-        } else if (role === "project_manager") {
-          navigate("/projects");
-        } else if (role === "head_driver") {
-          navigate("/deliveryRequests");
-        } else if (role === "dev" || role === "admin") {
-          navigate("/admin");
-        } else {
-          navigate("/projects"); // Default fallback
-        }
+      // Redirect after short delay to role's home page
+      setTimeout(() => {
+        navigate(getHomeForRole(primaryRole));
       }, 1500);
     } catch (err) {
       console.error(err);

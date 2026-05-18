@@ -8,4 +8,6 @@ import java.util.List;
 public interface DeliveryAssignmentRepo extends JpaRepository<DeliveryAssignment, Long> {
     List<DeliveryAssignment> findByMaterialRequestId(Long requestId);
     List<DeliveryAssignment> findByDriverId(Long driverId);
+    List<DeliveryAssignment> findByBatchId(String batchId);
+    List<DeliveryAssignment> findByBatchIdIsNotNull();
 }

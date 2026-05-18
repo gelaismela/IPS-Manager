@@ -178,11 +178,14 @@ section {
 
 /* ===== ROLE BADGE ===== */
 .role-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.82em;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 0.74em;
   font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
   background: #e9ecef;
   color: #495057;
 }
@@ -198,6 +201,11 @@ section {
   background: #1a6fd4;
   color: #fff;
 }
+.role-badge.role-head-of-drivers,
+.role-badge.role-head-driver {
+  background: #0d9488;
+  color: #fff;
+}
 .role-badge.role-driver {
   background: #fd7e14;
   color: #fff;
@@ -205,6 +213,23 @@ section {
 [data-theme="dark"] .role-badge {
   background: #3a3f4e;
   color: #adb5bd;
+}
+[data-theme="dark"] .role-badge.role-admin {
+  background: #b91c1c;
+  color: #fff;
+}
+[data-theme="dark"] .role-badge.role-project-manager {
+  background: #1558b0;
+  color: #fff;
+}
+[data-theme="dark"] .role-badge.role-head-of-drivers,
+[data-theme="dark"] .role-badge.role-head-driver {
+  background: #0f766e;
+  color: #fff;
+}
+[data-theme="dark"] .role-badge.role-driver {
+  background: #c2600a;
+  color: #fff;
 }
 
 .projects-grid {
@@ -967,6 +992,113 @@ section {
   background: linear-gradient(135deg, #218838 0%, #1aa179 100%);
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.sent-delivery-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.delivery-confirmation-photo {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.no-photo-note {
+  font-size: 0.82em;
+  color: #6c757d;
+  font-style: italic;
+  margin: 0;
+}
+
+.delete-delivery-btn {
+  width: 100%;
+  padding: 7px 16px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.88em;
+  transition: background 0.2s;
+}
+
+.delete-delivery-btn:hover {
+  background: #b02a37;
+}
+
+/* Photo lightbox */
+.photo-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 16px;
+}
+
+.photo-lightbox-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.photo-lightbox-img {
+  max-width: 100%;
+  max-height: 75vh;
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.photo-lightbox-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #dc3545;
+  color: #fff;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.photo-lightbox-download {
+  padding: 8px 20px;
+  background: #0d6efd;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: background 0.2s;
+}
+
+.photo-lightbox-download:hover {
+  background: #0b5ed7;
+}
+
+.delivery-confirmation-photo {
+  cursor: zoom-in;
 }
 
 .empty-state {

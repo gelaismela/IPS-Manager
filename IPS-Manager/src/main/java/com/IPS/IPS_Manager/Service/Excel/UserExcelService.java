@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserExcelService {
@@ -41,11 +42,11 @@ public class UserExcelService {
             if (row.getRowNum() == 0) continue; // Skip header
 
             try {
-                // Read cells: Name | Email | Phone | Role | Password
+                // Read cells: Name | Email | Phone | Roles | Password
                 String name = getCellValueAsString(row, 0);
                 String email = getCellValueAsString(row, 1);
                 String phone = getCellValueAsString(row, 2);
-                String role = getCellValueAsString(row, 3).toLowerCase();
+                String rolesInput = getCellValueAsString(row, 3); // Can be comma-separated now!
                 String password = getCellValueAsString(row, 4);
 
                 // Validation
@@ -61,14 +62,26 @@ public class UserExcelService {
                     continue;
                 }
 
-                if (role == null || role.trim().isEmpty()) {
+                if (rolesInput == null || rolesInput.trim().isEmpty()) {
                     errors.add("Row " + (row.getRowNum() + 1) + ": Role is required");
                     failed++;
                     continue;
                 }
 
-                if (!VALID_ROLES.contains(role)) {
-                    errors.add("Row " + (row.getRowNum() + 1) + ": Invalid role '" + role + "'. Valid roles: " + VALID_ROLES);
+                // ✅ FIXED: Split comma-separated roles from the cell, trim, and lowercase them
+                Set<String> processedRoles = Arrays.stream(rolesInput.split(","))
+                        .map(String::trim)
+                        .map(String::toLowerCase)
+                        .filter(role -> !role.isEmpty())
+                        .collect(Collectors.toSet());
+
+                // ✅ Validate all parsed roles against the valid list
+                List<String> invalidRoles = processedRoles.stream()
+                        .filter(role -> !VALID_ROLES.contains(role))
+                        .toList();
+
+                if (!invalidRoles.isEmpty()) {
+                    errors.add("Row " + (row.getRowNum() + 1) + ": Invalid role(s) " + invalidRoles + ". Valid roles: " + VALID_ROLES);
                     failed++;
                     continue;
                 }
@@ -81,13 +94,12 @@ public class UserExcelService {
                     Users user = existingUser.get();
                     user.setName(name);
                     user.setPhone(phone);
-                    user.setRole(role);
+                    user.setRoles(processedRoles); // ✅ FIXED: Saving the new Set directly
 
                     // Only update password if provided in Excel
                     if (password != null && !password.trim().isEmpty()) {
                         user.setPassword(encoder.encode(password));
                     }
-                    // Otherwise keep existing password
 
                     userRepo.save(user);
                     updated++;
@@ -97,7 +109,7 @@ public class UserExcelService {
                     user.setName(name);
                     user.setMail(email);
                     user.setPhone(phone);
-                    user.setRole(role);
+                    user.setRoles(processedRoles); // ✅ FIXED: Assigning the Set to the new entity
 
                     // Set password (default to "changeme123" if not provided)
                     String finalPassword = (password != null && !password.trim().isEmpty())
@@ -134,11 +146,9 @@ public class UserExcelService {
                 return "";
             }
 
-            // Use if-else instead of switch for Java 11+ compatibility
             if (row.getCell(cellIndex).getCellType() == org.apache.poi.ss.usermodel.CellType.STRING) {
                 return row.getCell(cellIndex).getStringCellValue().trim();
             } else if (row.getCell(cellIndex).getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC) {
-                // Handle phone numbers stored as numbers
                 return String.valueOf((long) row.getCell(cellIndex).getNumericCellValue());
             } else {
                 return "";

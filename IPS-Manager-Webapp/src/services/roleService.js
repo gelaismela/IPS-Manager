@@ -1,42 +1,66 @@
 /**
- * Get the current user's role from stored auth data.
- * Checks JWT token or user object in localStorage/sessionStorage.
- * @returns {'ADMIN' | 'HEAD_DRIVER' | 'DRIVER' | 'PROJECT_MANAGER' | 'WORKER' | null}
+ * Get all of the current user's roles from stored auth data.
+ * @returns {string[]} - Uppercased role names e.g. ['ADMIN', 'PROJECT_MANAGER']
  */
-export function getUserRole() {
+export function getUserRoles() {
   try {
-    // Check for user object with role
+    // Prefer the stored roles array (set by login())
+    const rolesStr =
+      localStorage.getItem("roles") || sessionStorage.getItem("roles");
+    if (rolesStr) {
+      const parsed = JSON.parse(rolesStr);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((r) => r.toUpperCase());
+      }
+    }
+
+    // Fall back to single role string
     const userStr =
       localStorage.getItem("user") || sessionStorage.getItem("user");
     if (userStr) {
       const user = JSON.parse(userStr);
-      if (user.role) return user.role.toUpperCase();
+      if (Array.isArray(user.roles) && user.roles.length > 0) {
+        return user.roles.map((r) => r.toUpperCase());
+      }
+      if (user.role) return [user.role.toUpperCase()];
     }
 
-    // Decode JWT token if present
+    // Decode JWT token as last resort
     const token =
       localStorage.getItem("token") || sessionStorage.getItem("token");
     if (token) {
       const payload = JSON.parse(atob(token.split(".")[1]));
-      if (payload.role) return payload.role.toUpperCase();
-      if (payload.authorities) {
-        // Spring Security authorities format
-        const role = payload.authorities.find((a) => a.startsWith("ROLE_"));
-        if (role) return role.replace("ROLE_", "");
+      if (payload.role) return [payload.role.toUpperCase()];
+      if (Array.isArray(payload.authorities)) {
+        return payload.authorities
+          .filter((a) => a.startsWith("ROLE_"))
+          .map((a) => a.replace("ROLE_", ""));
       }
     }
   } catch (e) {
-    console.warn("Failed to parse user role:", e);
+    console.warn("Failed to parse user roles:", e);
   }
-  return null;
+  return [];
 }
 
 /**
- * Check if user has one of the specified roles.
- * @param {string[]} roles - Array of role names
+ * Get the primary (highest-priority) role for the current user.
+ * @returns {'ADMIN' | 'PROJECT_MANAGER' | 'HEAD_DRIVER' | 'DRIVER' | 'WORKER' | null}
+ */
+export function getUserRole() {
+  const roles = getUserRoles();
+  if (roles.length === 0) return null;
+  const PRIORITY = ["ADMIN", "PROJECT_MANAGER", "HEAD_DRIVER", "DRIVER"];
+  return PRIORITY.find((p) => roles.includes(p)) || roles[0];
+}
+
+/**
+ * Check if user has at least one of the specified roles.
+ * @param {string[]} roles - Array of role names to check against
  * @returns {boolean}
  */
 export function hasRole(roles) {
-  const userRole = getUserRole();
-  return userRole && roles.map((r) => r.toUpperCase()).includes(userRole);
+  const userRoles = getUserRoles();
+  const normalized = roles.map((r) => r.toUpperCase());
+  return userRoles.some((r) => normalized.includes(r));
 }

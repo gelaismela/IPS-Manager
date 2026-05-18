@@ -20,7 +20,8 @@ public class DeliveryAssignment {
     @ManyToOne(optional = false)
     private MaterialRequest materialRequest;
 
-    @ManyToOne(optional = false)
+    @ManyToOne
+    @JoinColumn(name = "driver_id", nullable = true)
     private Users driver;
 
     private int assignedQuantity;
@@ -29,4 +30,6 @@ public class DeliveryAssignment {
 
     @Enumerated(EnumType.STRING)
     private MaterialRequestStatus status = MaterialRequestStatus.PENDING;
+
+    private String batchId; // groups assignments into a batch (UUID string)
 }

@@ -46,13 +46,15 @@ const ProjectList = () => {
   return (
     <div className="projectList-main">
       <h2>All Projects</h2>
-      <input
-        type="text"
-        className="search-input"
-        placeholder="Search by name or code"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="projectList-toolbar">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Search by name or Project Code"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
       {filteredProjects.length > 0 ? (
         <ul className="projectList">
           {filteredProjects.map((project) => (

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../api/api";
 import Logo from "./Logo";
 import ThemeToggle from "./ThemeToggle";
+import RoleSwitcher from "./RoleSwitcher";
 import "../styles/navbar.css";
 
 function Navbar() {
@@ -13,6 +14,7 @@ function Navbar() {
       <Logo />
 
       <div className="nav-actions">
+        <RoleSwitcher />
         <ThemeToggle />
         <button
           onClick={() => navigate("/notification-settings")}

@@ -4,6 +4,7 @@ import {
   getDeliveriesByDriver,
   updateDeliveryStatus,
   getAllMaterialRequests,
+  uploadDeliveryPhoto,
 } from "../api/api";
 import { useDeliveryNotifications } from "../hooks/useDeliveryNotifications";
 import "../styles/driverDelivery.css";
@@ -31,7 +32,20 @@ const DriverDelivery = () => {
   const [materialRequests, setMaterialRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeDelivery, setActiveDelivery] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoMode, setPhotoMode] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState("");
   const showToast = useToast();
+
+  const resetPhotoState = () => {
+    setPhotoFile(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setPhotoMode(false);
+    setPhotoError("");
+  };
 
   // Enable browser notifications for drivers
   useDeliveryNotifications(deliveries, materialRequests, true);
@@ -134,7 +148,7 @@ const DriverDelivery = () => {
                       : ""
                   }`}
                   style={{ position: "relative" }}
-                  onClick={() => setActiveDelivery(delivery)}
+                  onClick={() => { resetPhotoState(); setActiveDelivery(delivery); }}
                 >
                   <div className="delivery-summary">
                     <strong>Delivery #{delivery.id}</strong>
@@ -161,6 +175,7 @@ const DriverDelivery = () => {
                         className="close-btn"
                         onClick={(e) => {
                           e.stopPropagation();
+                          resetPhotoState();
                           setActiveDelivery(null);
                         }}
                       >
@@ -195,16 +210,75 @@ const DriverDelivery = () => {
                             Mark as Assigned
                           </button>
                         )}
-                        {activeDelivery.status === "ASSIGNED" && (
+                        {activeDelivery.status === "ASSIGNED" && !photoMode && (
                           <button
                             className="action-btn sent"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleStatusUpdate(activeDelivery.id, "SENT");
+                              setPhotoMode(true);
+                              setPhotoError("");
                             }}
                           >
                             Mark as Sent
                           </button>
+                        )}
+                        {activeDelivery.status === "ASSIGNED" && photoMode && (
+                          <div className="photo-upload-section" onClick={(e) => e.stopPropagation()}>
+                            <p className="photo-upload-title">📷 Upload delivery documentation photo</p>
+                            <label className="photo-upload-label" onClick={(e) => e.stopPropagation()}>
+                              {photoPreview ? "Change Photo" : "Choose Photo"}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                style={{ display: "none" }}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  const file = e.target.files[0];
+                                  if (!file) return;
+                                  if (photoPreview) URL.revokeObjectURL(photoPreview);
+                                  setPhotoFile(file);
+                                  setPhotoPreview(URL.createObjectURL(file));
+                                  setPhotoError("");
+                                }}
+                              />
+                            </label>
+                            {photoPreview && (
+                              <img src={photoPreview} alt="Delivery documentation" className="photo-preview" />
+                            )}
+                            {photoError && <p className="photo-error">{photoError}</p>}
+                            <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
+                              <button
+                                className="action-btn sent"
+                                disabled={!photoFile || uploadingPhoto}
+                                style={{ opacity: (!photoFile || uploadingPhoto) ? 0.6 : 1, cursor: (!photoFile || uploadingPhoto) ? "not-allowed" : "pointer" }}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!photoFile) { setPhotoError("Please select a photo first."); return; }
+                                  setUploadingPhoto(true);
+                                  setPhotoError("");
+                                  try {
+                                    await uploadDeliveryPhoto(activeDelivery.id, photoFile);
+                                    await handleStatusUpdate(activeDelivery.id, "SENT");
+                                    resetPhotoState();
+                                  } catch (err) {
+                                    setPhotoError(err.message || "Upload failed. Please try again.");
+                                  } finally {
+                                    setUploadingPhoto(false);
+                                  }
+                                }}
+                              >
+                                {uploadingPhoto ? "Uploading…" : "Confirm Delivery"}
+                              </button>
+                              <button
+                                className="action-btn"
+                                style={{ background: "#6c757d" }}
+                                onClick={(e) => { e.stopPropagation(); resetPhotoState(); }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>

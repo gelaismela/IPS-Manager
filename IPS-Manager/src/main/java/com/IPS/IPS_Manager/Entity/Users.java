@@ -6,6 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
+import java.util.Set;
+
 
 @Data
 @AllArgsConstructor
@@ -21,18 +24,16 @@ public class Users {
     private String name;
 
     @Column(nullable = true)
-
     private String mail;
-
 
     private String phone;
 
     @Column(nullable = true)
     private String password;
 
-    private String role;
-
-
-
-
+    // ✅ Automatically creates a separate 'user_roles' table
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role")
+    private Set<String> roles = new HashSet<>();
 }

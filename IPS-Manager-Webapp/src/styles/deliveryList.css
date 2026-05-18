@@ -108,3 +108,265 @@
     transform: translate(-50%, 8px);
   }
 }
+
+/* -- Mode Slider ----------------------------------- */
+.mode-slider {
+  display: flex;
+  background: #e9ecef;
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+[data-theme="dark"] .mode-slider {
+  background: #2a2f3e;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #6c757d;
+  transition: all 0.2s ease;
+}
+
+.mode-btn.active {
+  background: #fff;
+  color: #007bff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] .mode-btn.active {
+  background: #1a1f2e;
+  color: #4dabf7;
+}
+
+[data-theme="dark"] .mode-btn {
+  color: #9aa0a6;
+}
+
+/* -- Batch List ------------------------------------ */
+.batch-list-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.btn-refresh {
+  background: transparent;
+  border: 1.5px solid #dee2e6;
+  border-radius: 7px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-color, #333);
+  transition: background 0.15s;
+}
+
+.btn-refresh:hover:not(:disabled) { background: #f1f3f5; }
+[data-theme="dark"] .btn-refresh:hover:not(:disabled) { background: #2d3748; }
+
+.batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.batch-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+  border-left: 4px solid #007bff;
+  padding: 16px 18px;
+}
+
+[data-theme="dark"] .batch-card { background: #212633; }
+
+.batch-card--assigned { border-left-color: #198754; opacity: 0.85; }
+
+.batch-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.batch-project-name { font-weight: 700; font-size: 0.98rem; color: #1a202c; }
+[data-theme="dark"] .batch-project-name { color: #e8eaed; }
+
+.batch-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.batch-status-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.batch-status--pending { background: #fff3cd; color: #856404; }
+.batch-status--assigned { background: #d1e7dd; color: #0a5c36; }
+[data-theme="dark"] .batch-status--pending { background: #3d3010; color: #ffc107; }
+[data-theme="dark"] .batch-status--assigned { background: #0d3321; color: #75e0a7; }
+
+.batch-date { font-size: 0.78rem; color: #6c757d; }
+
+.batch-materials { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+
+.batch-material-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.87rem;
+  color: #495057;
+  padding: 3px 0;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+[data-theme="dark"] .batch-material-row { color: #9aa0a6; border-bottom-color: #2d3748; }
+
+.batch-material-name { flex: 1; }
+.batch-material-qty { font-weight: 600; color: #007bff; flex-shrink: 0; margin-left: 12px; }
+
+.batch-assigned-info { font-size: 0.88rem; color: #198754; margin-top: 4px; }
+
+.batch-action-row { display: flex; gap: 8px; align-items: center; }
+
+.btn-assign {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-assign:hover { background: #0056b3; }
+
+.btn-delete-batch {
+  background: transparent;
+  border: 1.5px solid #dee2e6;
+  border-radius: 7px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: #dc3545;
+}
+
+.btn-delete-batch:hover { background: #fff0f0; border-color: #dc3545; }
+[data-theme="dark"] .btn-delete-batch:hover { background: #3d1010; }
+
+.batch-assign-form { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
+.batch-assign-form select,
+.batch-assign-form input[type="date"] {
+  padding: 8px 12px;
+  border: 1.5px solid #dee2e6;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #333;
+}
+
+[data-theme="dark"] .batch-assign-form select,
+[data-theme="dark"] .batch-assign-form input[type="date"] {
+  background: #1a1f2e;
+  border-color: #3d4459;
+  color: #e8eaed;
+}
+
+.batch-assign-btns { display: flex; gap: 8px; }
+
+.btn-assign-confirm {
+  background: #198754;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-assign-confirm:hover:not(:disabled) { background: #146c43; }
+.btn-assign-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-assign-cancel {
+  background: transparent;
+  border: 1.5px solid #dee2e6;
+  border-radius: 7px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-color, #333);
+}
+
+.btn-assign-cancel:hover { background: #f8f9fa; }
+[data-theme="dark"] .btn-assign-cancel:hover { background: #2d3748; }
+
+/* -- Mobile Responsive (batch/assign UI) ------------------- */
+@media (max-width: 600px) {
+  .delivery-list-main {
+    padding: 16px 12px;
+    margin: 8px;
+    border-radius: 6px;
+  }
+
+  .mode-btn {
+    font-size: 0.8rem;
+    padding: 8px 6px;
+  }
+
+  .batch-card {
+    padding: 12px 14px;
+  }
+
+  .batch-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .batch-project-name {
+    font-size: 0.95rem;
+  }
+
+  .batch-assign-form select,
+  .batch-assign-form input[type="date"] {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .batch-assign-btns {
+    flex-direction: column;
+  }
+
+  .btn-assign-confirm,
+  .btn-assign-cancel {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .batch-action-row {
+    flex-wrap: wrap;
+  }
+
+  .btn-assign {
+    flex: 1;
+    text-align: center;
+  }
+
+  .batch-material-row {
+    font-size: 0.82rem;
+  }
+}

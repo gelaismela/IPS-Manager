@@ -16,7 +16,7 @@ public interface UserRepo extends JpaRepository<Users, Long> {
 
     Users findByName(String name);
 
-    List<Users> findByRole(String role);
-
+    // ✅ FIXED: Changed from findByRole to findByRolesContaining
+    List<Users> findByRolesContaining(String role);
 
 }

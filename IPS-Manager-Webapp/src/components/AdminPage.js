@@ -12,6 +12,8 @@ import {
   getMaterialsByProject,
   getUsers,
   createUser,
+  updateUser,
+  deleteUser,
   assignProjectManager,
   getMyProjects,
   addMaterial,
@@ -23,6 +25,9 @@ import {
   getDrivers,
   addProject,
   uploadProjectsExcel,
+  getDeliveryPhotos,
+  getPhotoBlob,
+  deleteDelivery,
 } from "../api/api";
 import "../styles/adminPage.css";
 import ExcelUpload from "./ExcelUpload";
@@ -31,10 +36,18 @@ import { useToast } from "../contexts/ToastContext";
 
 const ALLOWED_STATUSES = ["PENDING", "PARTIALLY_ASSIGNED", "ASSIGNED", "SENT"];
 
+const AVAILABLE_ROLES = [
+  { value: "admin",           label: "Admin" },
+  { value: "project_manager", label: "Project Manager" },
+  { value: "head_of_drivers", label: "Head Driver" },
+  { value: "driver",          label: "Driver" },
+];
+
 const AdminPage = () => {
   const { t } = useTranslation();
   const showToast = useToast();
   const [confirmModal, setConfirmModal] = useState(null); // { message, onConfirm }
+  const [photoModal, setPhotoModal] = useState(null); // { blobUrl, fileName }
   const [projects, setProjects] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [requests, setRequests] = useState([]);
@@ -60,6 +73,8 @@ const AdminPage = () => {
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const excelInputRef = useRef(null);
   const projectExcelInputRef = useRef(null);
+  const [deliveryPhotos, setDeliveryPhotos] = useState({}); // { [deliveryId]: blobUrl | null }
+  const loadedDeliveryPhotosRef = useRef(new Set());
 
   // Tab navigation
   const [activeTab, setActiveTab] = useState("projects");
@@ -68,9 +83,12 @@ const AdminPage = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [userSearch, setUserSearch] = useState("");
   const [showAddUserForm, setShowAddUserForm] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", mail: "", password: "", role: "project_manager", phone: "" });
+  const [newUser, setNewUser] = useState({ name: "", mail: "", password: "", roles: ["project_manager"], phone: "" });
   const [addingUser, setAddingUser] = useState(false);
   const [addUserError, setAddUserError] = useState("");
+  const [editingUser, setEditingUser] = useState(null); // { id, name, mail, roles, phone }
+  const [savingUser, setSavingUser] = useState(false);
+  const [userSaveError, setUserSaveError] = useState("");
   const [matCatalogSearch, setMatCatalogSearch] = useState("");
   const [editingMaterial, setEditingMaterial] = useState(null); // { id, name, unit } or null
   const [newCatalogMaterial, setNewCatalogMaterial] = useState({
@@ -135,10 +153,13 @@ const AdminPage = () => {
         try {
           const usersData = await getUsers();
           setAllUsers(usersData || []);
-          // Filter only project managers (or keep all users if you want flexibility)
-          const managers = usersData.filter(
-            (u) => u.role === "project_manager" || u.role === "dev",
-          );
+          // Filter only project managers
+          const managers = usersData.filter((u) => {
+            const roles = Array.isArray(u.roles)
+              ? u.roles.map((r) => r.toLowerCase())
+              : u.role ? [u.role.toLowerCase()] : [];
+            return roles.includes("project_manager");
+          });
           setProjectManagers(managers || []);
         } catch (userErr) {
           console.warn("Could not fetch users:", userErr);
@@ -821,6 +842,38 @@ const AdminPage = () => {
     }
   };
 
+  // Load confirmation photos for SENT deliveries
+  useEffect(() => {
+    deliveries
+      .filter((d) => d.status === "SENT" && !loadedDeliveryPhotosRef.current.has(d.id))
+      .forEach(async (d) => {
+        loadedDeliveryPhotosRef.current.add(d.id);
+        try {
+          const photos = await getDeliveryPhotos(d.id);
+          if (photos && photos.length > 0) {
+            const blobUrl = await getPhotoBlob(photos[0].id);
+            setDeliveryPhotos((prev) => ({ ...prev, [d.id]: blobUrl }));
+          }
+        } catch {
+          // no photo uploaded or endpoint not yet available
+        }
+      });
+  }, [deliveries]);
+
+  const handleDeleteDelivery = async (deliveryId) => {
+    try {
+      await deleteDelivery(deliveryId);
+      const blobUrl = deliveryPhotos[deliveryId];
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      setDeliveryPhotos((prev) => { const n = { ...prev }; delete n[deliveryId]; return n; });
+      loadedDeliveryPhotosRef.current.delete(deliveryId);
+      setDeliveries((prev) => prev.filter((d) => d.id !== deliveryId));
+      showToast("Delivery deleted.", "success");
+    } catch (err) {
+      showToast("Failed to delete delivery: " + (err.message || "Unknown error"), "error");
+    }
+  };
+
   const handleDeliveryStatusUpdate = async (deliveryId, newStatus) => {
     if (!ALLOWED_STATUSES.includes(newStatus)) {
       showToast(`Invalid status: ${newStatus}`, "error");
@@ -940,7 +993,7 @@ const AdminPage = () => {
               {isAdmin && (
                 <button
                   className="edit-btn"
-                  style={{ background: "#007bff", whiteSpace: "nowrap" }}
+                  style={{ background: "#007bff", whiteSpace: "nowrap", marginTop: 0 }}
                   onClick={() => { setShowAddProjectModal(true); setAddProjectError(""); setNewProject({ name: "", projectCode: "", address: "" }); setProjectImportMode("manual"); }}
                 >
                   + Add Project
@@ -1771,6 +1824,28 @@ const AdminPage = () => {
                                                   ✓ Mark as Sent
                                                 </button>
                                               )}
+                                              {delivery.status === "SENT" && (
+                                                <div className="sent-delivery-actions">
+                                                  {deliveryPhotos[delivery.id] && (
+                                                    <img
+                                                      src={deliveryPhotos[delivery.id]}
+                                                      alt="Delivery confirmation"
+                                                      className="delivery-confirmation-photo"
+                                                      title="Click to zoom"
+                                                      onClick={() => setPhotoModal({ blobUrl: deliveryPhotos[delivery.id], fileName: `delivery_${delivery.id}.jpg` })}
+                                                    />
+                                                  )}
+                                                  {!deliveryPhotos[delivery.id] && loadedDeliveryPhotosRef.current.has(delivery.id) && (
+                                                    <p className="no-photo-note">No photo uploaded</p>
+                                                  )}
+                                                  <button
+                                                    className="delete-delivery-btn"
+                                                    onClick={() => handleDeleteDelivery(delivery.id)}
+                                                  >
+                                                    🗑 Delete Record
+                                                  </button>
+                                                </div>
+                                              )}
                                             </div>
                                           );
                                         })}
@@ -2465,12 +2540,16 @@ const AdminPage = () => {
                     setAddUserError("Please enter a valid email address.");
                     return;
                   }
+                  if (newUser.roles.length === 0) {
+                    setAddUserError("Select at least one role.");
+                    return;
+                  }
                   setAddingUser(true);
                   try {
-                    await createUser({ ...newUser, mail: newUser.mail.trim(), name: newUser.name.trim(), phone: newUser.phone.trim() || null });
+                    await createUser({ name: newUser.name.trim(), mail: newUser.mail.trim(), password: newUser.password, roles: newUser.roles, phone: newUser.phone.trim() || null });
                     const usersData = await getUsers();
                     setAllUsers(usersData || []);
-                    setNewUser({ name: "", mail: "", password: "", role: "project_manager", phone: "" });
+                    setNewUser({ name: "", mail: "", password: "", roles: ["project_manager"], phone: "" });
                     setShowAddUserForm(false);
                   } catch (err) {
                     setAddUserError(err.message || "Failed to create user.");
@@ -2514,19 +2593,21 @@ const AdminPage = () => {
                     style={{ padding: "7px 10px", borderRadius: "7px", border: "1.5px solid #dee2e6", fontSize: "13px" }}
                   />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={{ fontSize: "12px", fontWeight: 600, color: "#495057" }}>Role *</label>
-                  <select
-                    value={newUser.role}
-                    onChange={(e) => setNewUser((u) => ({ ...u, role: e.target.value }))}
-                    style={{ padding: "7px 10px", borderRadius: "7px", border: "1.5px solid #dee2e6", fontSize: "13px" }}
-                  >
-                    <option value="project_manager">Project Manager</option>
-                    <option value="driver">Driver</option>
-                    <option value="head_of_drivers">Head Driver</option>
-                    <option value="admin">Admin</option>
-                    <option value="dev">Dev</option>
-                  </select>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", gridColumn: "1 / -1" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "#495057" }}>Roles * (select one or more)</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {AVAILABLE_ROLES.map((r) => (
+                      <label key={r.value} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "13px", cursor: "pointer", padding: "5px 10px", borderRadius: "6px", border: `1.5px solid ${newUser.roles.includes(r.value) ? "#6366f1" : "#dee2e6"}`, background: newUser.roles.includes(r.value) ? "#eef2ff" : "transparent", fontWeight: newUser.roles.includes(r.value) ? 600 : 400, userSelect: "none" }}>
+                        <input
+                          type="checkbox"
+                          checked={newUser.roles.includes(r.value)}
+                          onChange={(e) => setNewUser((u) => ({ ...u, roles: e.target.checked ? [...u.roles, r.value] : u.roles.filter((x) => x !== r.value) }))}
+                          style={{ accentColor: "#6366f1" }}
+                        />
+                        {r.label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <label style={{ fontSize: "12px", fontWeight: 600, color: "#495057" }}>Phone</label>
@@ -2563,8 +2644,9 @@ const AdminPage = () => {
                     <th style={{ width: "50px" }}>ID</th>
                     <th style={{ textAlign: "left" }}>Name</th>
                     <th style={{ textAlign: "left" }}>Email</th>
-                    <th style={{ width: "140px" }}>Role</th>
+                    <th style={{ width: "200px" }}>Roles</th>
                     <th style={{ width: "120px" }}>Phone</th>
+                    <th style={{ width: "100px", textAlign: "center" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2575,28 +2657,170 @@ const AdminPage = () => {
                       return (u.name || "").toLowerCase().includes(q) || (u.mail || "").toLowerCase().includes(q);
                     })
                     .map((u) => (
-                      <tr
-                        key={u.id}
-                        onClick={() => toggleUserRow(u.id)}
-                        className={expandedUserRows.has(u.id) ? "u-expanded" : ""}
-                      >
+                      <tr key={u.id}>
                         <td className="u-id" data-label="ID" style={{ color: "#6c757d" }}>{u.id}</td>
                         <td className="u-name" data-label="Name" style={{ fontWeight: 600 }}>{u.name}</td>
                         <td className="u-email" data-label="Email">{u.mail}</td>
-                        <td className="u-role" data-label="Role">
-                          <span
-                            className={`role-badge role-${(u.role || "").replace(/_/g, "-")}`}
-                          >
-                            {u.role || "—"}
-                          </span>
+                        <td className="u-role" data-label="Roles">
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                            {(Array.isArray(u.roles) ? u.roles : u.role ? [u.role] : []).map((r) => {
+                              const key = r.toLowerCase();
+                              const labels = { admin: "Admin", project_manager: "Project Manager", head_of_drivers: "Head Driver", head_driver: "Head Driver", driver: "Driver" };
+                              const label = labels[key] || r;
+                              const cssClass = `role-badge role-${key.replace(/_/g, "-")}`;
+                              return <span key={r} className={cssClass}>{label}</span>;
+                            })}
+                          </div>
                         </td>
                         <td className="u-phone" data-label="Phone">{u.phone || "—"}</td>
+                        <td data-label="Actions" style={{ textAlign: "center" }}>
+                          <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                            <button
+                              onClick={() => { setEditingUser({ id: u.id, name: u.name || "", mail: u.mail || "", roles: Array.isArray(u.roles) ? [...u.roles] : u.role ? [u.role] : [], phone: u.phone || "" }); setUserSaveError(""); }}
+                              style={{ padding: "4px 10px", borderRadius: "6px", border: "none", background: "#6366f1", color: "#fff", fontWeight: 600, fontSize: "12px", cursor: "pointer" }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setConfirmModal({ message: `Delete user "${u.name}"? This cannot be undone.`, onConfirm: async () => { try { await deleteUser(u.id); setAllUsers((prev) => prev.filter((x) => x.id !== u.id)); showToast("User deleted.", "success"); } catch (err) { showToast(err.message || "Failed to delete user.", "error"); } } })}
+                              style={{ padding: "4px 10px", borderRadius: "6px", border: "none", background: "#ef4444", color: "#fff", fontWeight: 600, fontSize: "12px", cursor: "pointer" }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
               </table>
             </div>
           </section>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 }}
+          onClick={() => setEditingUser(null)}
+        >
+          <div
+            style={{ background: "var(--card-bg, #fff)", borderRadius: "12px", padding: "28px", width: "90%", maxWidth: "480px", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 20px", fontSize: "17px", fontWeight: 700 }}>Edit User</h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#495057" }}>Full Name *</label>
+                <input
+                  type="text"
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser((u) => ({ ...u, name: e.target.value }))}
+                  style={{ padding: "8px 10px", borderRadius: "7px", border: "1.5px solid #dee2e6", fontSize: "13px" }}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#495057" }}>Email *</label>
+                <input
+                  type="email"
+                  value={editingUser.mail}
+                  onChange={(e) => setEditingUser((u) => ({ ...u, mail: e.target.value }))}
+                  style={{ padding: "8px 10px", borderRadius: "7px", border: "1.5px solid #dee2e6", fontSize: "13px" }}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#495057" }}>Roles * (select one or more)</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {AVAILABLE_ROLES.map((r) => (
+                    <label key={r.value} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "13px", cursor: "pointer", padding: "5px 10px", borderRadius: "6px", border: `1.5px solid ${editingUser.roles.includes(r.value) ? "#6366f1" : "#dee2e6"}`, background: editingUser.roles.includes(r.value) ? "#eef2ff" : "transparent", fontWeight: editingUser.roles.includes(r.value) ? 600 : 400, userSelect: "none" }}>
+                      <input
+                        type="checkbox"
+                        checked={editingUser.roles.includes(r.value)}
+                        onChange={(e) => setEditingUser((u) => ({ ...u, roles: e.target.checked ? [...u.roles, r.value] : u.roles.filter((x) => x !== r.value) }))}
+                        style={{ accentColor: "#6366f1" }}
+                      />
+                      {r.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#495057" }}>Phone</label>
+                <input
+                  type="tel"
+                  value={editingUser.phone}
+                  onChange={(e) => setEditingUser((u) => ({ ...u, phone: e.target.value }))}
+                  placeholder="+995 555 000 000"
+                  style={{ padding: "8px 10px", borderRadius: "7px", border: "1.5px solid #dee2e6", fontSize: "13px" }}
+                />
+              </div>
+
+              {userSaveError && (
+                <div style={{ color: "#dc3545", fontSize: "13px", fontWeight: 500, padding: "6px 10px", background: "#fee2e2", borderRadius: "6px" }}>
+                  {userSaveError}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "4px" }}>
+                <button
+                  onClick={() => setEditingUser(null)}
+                  style={{ padding: "8px 18px", borderRadius: "7px", border: "1.5px solid #dee2e6", background: "transparent", cursor: "pointer", fontWeight: 600, fontSize: "13px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={savingUser}
+                  onClick={async () => {
+                    if (!editingUser.name.trim() || !editingUser.mail.trim()) {
+                      setUserSaveError("Name and email are required.");
+                      return;
+                    }
+                    if (editingUser.roles.length === 0) {
+                      setUserSaveError("Select at least one role.");
+                      return;
+                    }
+                    setSavingUser(true);
+                    setUserSaveError("");
+                    try {
+                      await updateUser(editingUser.id, { name: editingUser.name.trim(), mail: editingUser.mail.trim(), roles: editingUser.roles, phone: editingUser.phone.trim() || null });
+                      const usersData = await getUsers();
+                      setAllUsers(usersData || []);
+                      setEditingUser(null);
+                      showToast("User updated successfully.", "success");
+                    } catch (err) {
+                      setUserSaveError(err.message || "Failed to update user.");
+                    } finally {
+                      setSavingUser(false);
+                    }
+                  }}
+                  style={{ padding: "8px 18px", borderRadius: "7px", border: "none", background: savingUser ? "#a5b4fc" : "#6366f1", color: "#fff", fontWeight: 600, fontSize: "13px", cursor: savingUser ? "not-allowed" : "pointer" }}
+                >
+                  {savingUser ? "Saving…" : "Save Changes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Lightbox Modal */}
+      {photoModal && (
+        <div
+          className="photo-lightbox-overlay"
+          onClick={() => setPhotoModal(null)}
+        >
+          <div className="photo-lightbox-box" onClick={(e) => e.stopPropagation()}>
+            <button className="photo-lightbox-close" onClick={() => setPhotoModal(null)}>×</button>
+            <img src={photoModal.blobUrl} alt="Delivery confirmation" className="photo-lightbox-img" />
+            <a
+              href={photoModal.blobUrl}
+              download={photoModal.fileName}
+              className="photo-lightbox-download"
+            >
+              ⬇ Download
+            </a>
+          </div>
         </div>
       )}
 

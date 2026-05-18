@@ -26,10 +26,6 @@ import java.security.spec.ECGenParameterSpec;
 import java.time.LocalDateTime;
 import java.util.*;
 
-/**
- * Service for managing push notifications
- * Includes console logging for debugging
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -52,7 +48,6 @@ public class PushNotificationService {
     @PostConstruct
     public void init() {
         try {
-            // Add BouncyCastle security provider
             Security.addProvider(new BouncyCastleProvider());
 
             if (publicKey != null && !publicKey.isEmpty() && privateKey != null && !privateKey.isEmpty()) {
@@ -72,27 +67,19 @@ public class PushNotificationService {
         }
     }
 
-    /**
-     * Auto-generate VAPID keys if not configured (for development)
-     * Uses pure Java - no external Utils dependency
-     */
     private void generateAndDisplayKeys() {
         try {
-            // Generate EC P-256 key pair (standard for VAPID)
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
-            ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1"); // P-256 curve
+            ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");
             keyPairGenerator.initialize(ecSpec, new SecureRandom());
             KeyPair keyPair = keyPairGenerator.generateKeyPair();
 
-            // Get public and private keys
             ECPublicKey pubKey = (ECPublicKey) keyPair.getPublic();
             ECPrivateKey privKey = (ECPrivateKey) keyPair.getPrivate();
 
-            // Convert to uncompressed format (required for VAPID)
             byte[] publicKeyBytes = encodePublicKey(pubKey);
             byte[] privateKeyBytes = privKey.getS().toByteArray();
 
-            // Pad private key to 32 bytes if needed
             if (privateKeyBytes.length < 32) {
                 byte[] padded = new byte[32];
                 System.arraycopy(privateKeyBytes, 0, padded, 32 - privateKeyBytes.length, privateKeyBytes.length);
@@ -103,25 +90,17 @@ public class PushNotificationService {
                 privateKeyBytes = trimmed;
             }
 
-            String publicKeyBase64 = Base64.getUrlEncoder().withoutPadding()
-                    .encodeToString(publicKeyBytes);
-            String privateKeyBase64 = Base64.getUrlEncoder().withoutPadding()
-                    .encodeToString(privateKeyBytes);
+            String publicKeyBase64 = Base64.getUrlEncoder().withoutPadding().encodeToString(publicKeyBytes);
+            String privateKeyBase64 = Base64.getUrlEncoder().withoutPadding().encodeToString(privateKeyBytes);
 
             log.warn("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             log.warn("🔑 VAPID KEYS AUTO-GENERATED FOR DEVELOPMENT");
             log.warn("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            log.warn("📋 Add these to your application.properties file:");
-            log.warn("");
             log.warn("push.notification.public-key={}", publicKeyBase64);
             log.warn("push.notification.private-key={}", privateKeyBase64);
             log.warn("push.notification.subject=mailto:your-email@example.com");
-            log.warn("");
-            log.warn("⚠️ IMPORTANT: Save these keys! They will change on restart.");
-            log.warn("⚠️ For production, add them to application.properties");
             log.warn("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-            // Use the generated keys for this session
             pushService = new PushService();
             pushService.setPublicKey(publicKeyBase64);
             pushService.setPrivateKey(privateKeyBase64);
@@ -134,10 +113,6 @@ public class PushNotificationService {
         }
     }
 
-    /**
-     * Encode EC public key to uncompressed format (0x04 + X + Y)
-     * Required format for VAPID public keys
-     */
     private byte[] encodePublicKey(ECPublicKey publicKey) {
         byte[] x = publicKey.getW().getAffineX().toByteArray();
         byte[] y = publicKey.getW().getAffineY().toByteArray();
@@ -153,9 +128,6 @@ public class PushNotificationService {
         return encoded;
     }
 
-    /**
-     * Pad or trim byte array to specified length
-     */
     private byte[] padOrTrim(byte[] input, int length) {
         if (input.length == length) {
             return input;
@@ -170,13 +142,10 @@ public class PushNotificationService {
         }
     }
 
-    /**
-     * Subscribe user to push notifications
-     */
     public PushSubscription subscribe(Users user, PushSubscriptionDTO dto) {
-        log.info("📝 Subscribing user {} ({}) to push notifications", user.getName(), user.getRole());
+        // ✅ FIXED: Log user roles string cleanly out of the Set
+        log.info("📝 Subscribing user {} ({}) to push notifications", user.getName(), user.getRoles());
 
-        // Check if subscription exists
         Optional<PushSubscription> existing = subscriptionRepo.findByEndpoint(dto.getEndpoint());
 
         if (existing.isPresent()) {
@@ -188,7 +157,6 @@ public class PushNotificationService {
             return subscriptionRepo.save(sub);
         }
 
-        // Create new subscription
         PushSubscription subscription = new PushSubscription();
         subscription.setUser(user);
         subscription.setEndpoint(dto.getEndpoint());
@@ -204,11 +172,9 @@ public class PushNotificationService {
         return saved;
     }
 
-    /**
-     * Send push notification to specific user
-     */
     public void sendToUser(Users user, String title, String body, Map<String, String> data) {
-        log.info("📧 NOTIFICATION TO USER: {} ({})", user.getName(), user.getRole());
+        // ✅ FIXED: Updated log context
+        log.info("📧 NOTIFICATION TO USER: {} ({})", user.getName(), user.getRoles());
         log.info("   Title: {}", title);
         log.info("   Body: {}", body);
         log.info("   Data: {}", data);
@@ -231,7 +197,6 @@ public class PushNotificationService {
             } catch (Exception e) {
                 log.error("❌ Failed to send push to subscription {}: {}", sub.getId(), e.getMessage());
 
-                // Mark subscription as inactive if it's invalid (410 Gone)
                 if (e.getMessage().contains("410") || e.getMessage().contains("Gone")) {
                     sub.setActive(false);
                     subscriptionRepo.save(sub);
@@ -243,6 +208,7 @@ public class PushNotificationService {
 
     /**
      * Send notification to all users with specific role
+     * ✅ FIXED: Updated to cross-reference multiple roles cleanly using Streams
      */
     public void sendToRole(String role, String title, String body, Map<String, String> data) {
         log.info("🔔 Attempting to send notification to ROLE: {}", role);
@@ -250,13 +216,19 @@ public class PushNotificationService {
         log.info("   Body: {}", body);
         log.info("   Data: {}", data);
 
-        List<PushSubscription> subscriptions = subscriptionRepo.findByUser_RoleAndActiveTrue(role);
+        // Fetch all active subscriptions and filter programmatically by checking inside the user's role set
+        List<PushSubscription> subscriptions = subscriptionRepo.findAll().stream()
+                .filter(sub -> sub.isActive() && sub.getUser() != null && sub.getUser().getRoles() != null)
+                .filter(sub -> sub.getUser().getRoles().stream().anyMatch(r -> r.equalsIgnoreCase(role)))
+                .toList();
 
         if (subscriptions.isEmpty()) {
             log.warn("⚠️ No active subscriptions found for role: {}", role);
 
-            // Count how many users have this role
-            List<Users> usersWithRole = userRepo.findByRole(role);
+            // Fetch all users to see if anyone holds this role
+            List<Users> usersWithRole = userRepo.findAll().stream()
+                    .filter(user -> user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.equalsIgnoreCase(role)))
+                    .toList();
             log.info("ℹ️ There are {} user(s) with role {} but none have enabled push notifications",
                     usersWithRole.size(), role);
             return;
@@ -280,7 +252,6 @@ public class PushNotificationService {
                         sub.getUser().getName(), sub.getId(), e.getMessage());
                 failCount++;
 
-                // Mark subscription as inactive if endpoint is invalid
                 if (e.getMessage().contains("410") || e.getMessage().contains("Gone")) {
                     sub.setActive(false);
                     subscriptionRepo.save(sub);
@@ -292,9 +263,6 @@ public class PushNotificationService {
         log.info("📊 Notification summary: {} sent, {} failed", successCount, failCount);
     }
 
-    /**
-     * Send actual push notification using Web Push API
-     */
     private void sendPushNotification(PushSubscription sub, String title, String body, Map<String, String> data)
             throws Exception {
 
@@ -303,7 +271,6 @@ public class PushNotificationService {
             return;
         }
 
-        // Create notification payload
         Map<String, Object> payload = new HashMap<>();
         payload.put("title", title);
         payload.put("body", body);
@@ -313,7 +280,6 @@ public class PushNotificationService {
 
         String payloadJson = new Gson().toJson(payload);
 
-        // Create Web Push notification
         Notification notification = new Notification(
                 sub.getEndpoint(),
                 sub.getP256dh(),
@@ -321,13 +287,9 @@ public class PushNotificationService {
                 payloadJson.getBytes()
         );
 
-        // Send notification
         pushService.send(notification);
     }
 
-    /**
-     * Unsubscribe from push notifications
-     */
     public void unsubscribe(String endpoint) {
         Optional<PushSubscription> subscription = subscriptionRepo.findByEndpoint(endpoint);
 

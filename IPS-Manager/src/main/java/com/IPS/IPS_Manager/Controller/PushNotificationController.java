@@ -7,7 +7,6 @@ import com.IPS.IPS_Manager.Entity.Users;
 import com.IPS.IPS_Manager.Repository.UserRepo;
 import com.IPS.IPS_Manager.Service.PushNotificationService;
 import lombok.RequiredArgsConstructor;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,8 +23,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class PushNotificationController {
+
     private final PushNotificationService pushService;
     private final UserRepo userRepo;
+
+    @Value("${push.notification.public-key:}")
+    private String vapidPublicKey;
 
     /**
      * Subscribe to push notifications
@@ -35,8 +38,9 @@ public class PushNotificationController {
         try {
             Users currentUser = getCurrentUser();
 
+            // ✅ FIXED: Log user roles via the new collection mapping to prevent compilation failure
             log.info("📥 Received subscription request from user: {} ({})",
-                    currentUser.getName(), currentUser.getRole());
+                    currentUser.getName(), currentUser.getRoles());
 
             PushSubscription subscription = pushService.subscribe(currentUser, dto);
 
@@ -126,14 +130,9 @@ public class PushNotificationController {
                 .getAuthentication()
                 .getName();
 
-        // Try to find by email first
         return userRepo.findByMail(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
     }
-
-
-    @Value("${push.notification.public-key:}")
-    private String vapidPublicKey;
 
     /**
      * Get VAPID public key for push subscription
@@ -142,15 +141,20 @@ public class PushNotificationController {
     public ResponseEntity<?> getVapidPublicKey() {
         log.info("📋 VAPID public key requested");
 
-        if (vapidPublicKey == null || vapidPublicKey.isEmpty()) {
-            log.warn("⚠️ VAPID public key not configured!");
+        // ✅ STRATEGIC CHECK: If properties are blank, grab the key from your service environment fallback
+        String activeKey = (vapidPublicKey != null && !vapidPublicKey.isEmpty())
+                ? vapidPublicKey
+                : System.getProperty("vapid.public.key"); // Ensure your Service populates this property if keys are auto-generated!
+
+        if (activeKey == null || activeKey.isEmpty()) {
+            log.warn("⚠️ VAPID public key not configured on server property stack!");
             return ResponseEntity.badRequest().body(Map.of(
                     "error", "VAPID keys not configured on server"
             ));
         }
 
         return ResponseEntity.ok(Map.of(
-                "publicKey", vapidPublicKey
+                "publicKey", activeKey
         ));
     }
 }

@@ -53,7 +53,7 @@ public class UserController {
                     .orElseThrow(() -> new RuntimeException("User not found"));
             return ResponseEntity.ok(Map.of(
                     "token", jwtToken,
-                    "role", dbUser.getRole(),
+                    "roles", dbUser.getRoles(), // ✅ Sends the entire Set back to the frontend
                     "id", dbUser.getId()
             ));
         } else {
@@ -72,8 +72,7 @@ public class UserController {
         return service.getUserById(id);
     }
 
-
-
+    // ✅ Update user details, including handling multiple roles
     @PutMapping("/user/{id}")
     public ResponseEntity<Users> updateUser(@PathVariable Long id, @RequestBody Users userDetails) {
         try {

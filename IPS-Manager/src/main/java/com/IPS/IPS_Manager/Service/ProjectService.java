@@ -52,7 +52,6 @@ public class ProjectService {
                 .findByProject_IdAndMaterial_Id(projectId, materialId);
 
         if (existing.isPresent()) {
-            // If material already assigned, we simply return it — no updates
             return existing.get();
         }
 
@@ -81,11 +80,11 @@ public class ProjectService {
 
     @Transactional
     public ProjectMaterial updateMaterialQuantity(Long projectId, String materialId, Integer newQuantity) {
+        // ✅ Double-check your repo method casing: typically using Project_Id and Material_Id matches JPA standards safely
         ProjectMaterial pm = projectMaterialRepo
-                .findByProjectIdAndMaterialId(projectId, materialId)
+                .findByProject_IdAndMaterial_Id(projectId, materialId)
                 .orElseThrow(() -> new RuntimeException("Material not found in project"));
 
-        // Cannot reduce assigned quantity below used amount
         if (newQuantity < pm.getQuantityUsed()) {
             throw new RuntimeException("Assigned quantity cannot be less than already used amount");
         }
@@ -102,8 +101,11 @@ public class ProjectService {
         Users projectManager = userRepo.findById(projectManagerId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + projectManagerId));
 
-        // Optional: Check if user has project_manager role
-        if (!"project_manager".equals(projectManager.getRole())) {
+        // ✅ FIXED: Checks the collection roles instead of assuming a single string field exists
+        boolean isManager = projectManager.getRoles() != null && projectManager.getRoles().stream()
+                .anyMatch(role -> "project_manager".equalsIgnoreCase(role));
+
+        if (!isManager) {
             throw new RuntimeException("User must have project_manager role");
         }
 

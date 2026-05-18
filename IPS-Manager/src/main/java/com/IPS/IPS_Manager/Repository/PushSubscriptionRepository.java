@@ -16,10 +16,6 @@ public interface PushSubscriptionRepository extends JpaRepository<PushSubscripti
      */
     List<PushSubscription> findByUserAndActiveTrue(Users user);
 
-    /**
-     * Find all active subscriptions for users with a specific role
-     */
-    List<PushSubscription> findByUser_RoleAndActiveTrue(String role);
 
     /**
      * Find subscription by endpoint

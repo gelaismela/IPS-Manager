@@ -3,8 +3,6 @@ package com.IPS.IPS_Manager.Service;
 import com.IPS.IPS_Manager.Entity.Users;
 import com.IPS.IPS_Manager.Repository.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.neo4j.Neo4jProperties;
-import org.springframework.boot.autoconfigure.pulsar.PulsarProperties;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -16,6 +14,7 @@ import java.util.Optional;
 
 @Service
 public class UserService {
+
     @Autowired
     private UserRepo repo;
 
@@ -25,13 +24,16 @@ public class UserService {
     @Autowired
     private JWTService service;
 
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
-    public Users register(Users user){
-        user.setPassword(encoder.encode(user.getPassword()));
+    public Users register(Users user) {
+        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+            user.setPassword(encoder.encode(user.getPassword()));
+        }
         return repo.save(user);
     }
 
+    // ✅ FIXED: Correctly merges the updated properties and the Set of roles
     public Users update(Long id, Users userDetails) {
         return repo.findById(id).map(user -> {
 
@@ -43,8 +45,9 @@ public class UserService {
                 user.setName(userDetails.getName());
             }
 
-            if (userDetails.getRole() != null && !userDetails.getRole().isEmpty()) {
-                user.setRole(userDetails.getRole());
+            // ✅ Merges multiple roles dynamically
+            if (userDetails.getRoles() != null && !userDetails.getRoles().isEmpty()) {
+                user.setRoles(userDetails.getRoles());
             }
 
             if (userDetails.getPhone() != null && !userDetails.getPhone().isEmpty()) {
@@ -67,7 +70,9 @@ public class UserService {
     }
 
     public String verify(Users user) {
-        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(user.getMail(), user.getPassword()));
+        Authentication authentication = authManager.authenticate(
+                new UsernamePasswordAuthenticationToken(user.getMail(), user.getPassword())
+        );
 
         if (authentication.isAuthenticated()){
             return service.generateToken(user.getMail());
@@ -79,15 +84,16 @@ public class UserService {
         return repo.findAll();
     }
 
-
     public Optional<Users> getUserById(Long id) {
         return repo.findById(id);
     }
 
+    // ✅ FIXED: Checks inside the Set collection to find users who have the "driver" role
     public List<Users> getAllDrivers() {
         return repo.findAll()
                 .stream()
-                .filter(users -> "driver".equalsIgnoreCase(users.getRole()))
+                .filter(user -> user.getRoles() != null && user.getRoles().stream()
+                        .anyMatch(role -> "driver".equalsIgnoreCase(role)))
                 .toList();
     }
 
