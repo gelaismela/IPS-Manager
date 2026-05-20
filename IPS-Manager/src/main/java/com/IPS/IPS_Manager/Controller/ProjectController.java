@@ -24,7 +24,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/projects")
-@PreAuthorize("hasRole('dev')")
 public class ProjectController {
 
     @Autowired
@@ -93,6 +92,17 @@ public class ProjectController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body("Error adding material: " + e.getMessage());
+        }
+    }
+
+    // Delete a project and all its corresponding material assignments
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteProject(@PathVariable Long id) {
+        try {
+            projectService.deleteProjectWithMaterials(id);
+            return ResponseEntity.noContent().build(); // Returns a clean HTTP 204 status
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body("Error deleting project: " + e.getMessage());
         }
     }
 

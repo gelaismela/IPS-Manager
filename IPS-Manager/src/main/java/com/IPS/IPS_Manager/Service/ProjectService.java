@@ -116,4 +116,22 @@ public class ProjectService {
     public List<Project> getProjectsByManagerId(Long managerId) {
         return projectRepo.findByProjectManagerId(managerId);
     }
+
+    @Transactional
+    public void deleteProjectWithMaterials(Long projectId) {
+        // 1. Verify the project exists first
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found with ID: " + projectId));
+
+        // 2. Fetch all material associations tied to this project
+        List<ProjectMaterial> linkedMaterials = projectMaterialRepo.findByProject_Id(projectId);
+
+        // 3. Clear them out of the project_materials table to prevent foreign key errors
+        if (!linkedMaterials.isEmpty()) {
+            projectMaterialRepo.deleteAll(linkedMaterials);
+        }
+
+        // 4. Safely drop the main project record
+        projectRepo.delete(project);
+    }
 }

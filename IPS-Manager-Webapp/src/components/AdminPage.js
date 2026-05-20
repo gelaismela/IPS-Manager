@@ -24,6 +24,7 @@ import {
   declineFailedRequest,
   getDrivers,
   addProject,
+  deleteProject,
   uploadProjectsExcel,
   getDeliveryPhotos,
   getPhotoBlob,
@@ -519,19 +520,29 @@ const AdminPage = () => {
       // Convert to array-of-arrays, skip header row
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
-      // Detect header row index (first row where first cell looks like "კოდი" or "Code")
+      // Detect header row index — look for a row containing "კოდი" or "code" in first 4 cells
       let startRow = 0;
       for (let i = 0; i < Math.min(5, rows.length); i++) {
-        const first = String(rows[i][0] || "").toLowerCase();
-        if (first === "კოდი" || first === "code" || first === "კოდი") {
+        const cells = rows[i].slice(0, 4).map((c) => String(c || "").toLowerCase());
+        if (cells.some((c) => c === "კოდი" || c === "code" || c === "№" || c === "#")) {
           startRow = i + 1;
           break;
         }
       }
 
+      // Detect column layout:
+      // Format A: №, კოდი, დასახელება, საზომი, საპროექტო  → code=col1, qty=col4
+      // Format B: კოდი, დასახელება, საზომი, საპროექტო      → code=col0, qty=col3
+      const headerRow = startRow > 0 ? rows[startRow - 1] : [];
+      const firstCell = String(headerRow[0] || "").toLowerCase();
+      const hasRowNum =
+        firstCell === "№" || firstCell === "#" || /^\d+$/.test(firstCell) || firstCell === "";
+      const codeCol = hasRowNum ? 1 : 0;
+      const qtyCol = hasRowNum ? 4 : 3;
+
       const dataRows = rows
         .slice(startRow)
-        .filter((r) => r[0] && r[3] !== "" && r[3] !== undefined);
+        .filter((r) => r[codeCol] && r[qtyCol] !== "" && r[qtyCol] !== undefined);
 
       if (dataRows.length === 0) {
         showToast("No data rows found. Make sure the file has columns: კოდი, დასახელება, განზ., საპროექტო", "warning");
@@ -544,8 +555,8 @@ const AdminPage = () => {
       const notFoundCodes = [];
 
       for (const row of dataRows) {
-        const code = String(row[0]).trim();
-        const qty = Number(row[3]);
+        const code = String(row[codeCol]).trim();
+        const qty = Number(row[qtyCol]);
         if (!code || isNaN(qty)) continue;
 
         // Find matching material in catalog by id (code)
@@ -970,6 +981,12 @@ const AdminPage = () => {
           >
             ❌ Failed Requests
           </button>
+          <button
+            className={`admin-tab-btn${activeTab === "excel" ? " active" : ""}`}
+            onClick={() => setActiveTab("excel")}
+          >
+            📁 Excel Upload
+          </button>
         </div>
       </div>
 
@@ -1029,6 +1046,28 @@ const AdminPage = () => {
                         style={{ background: "#28a745" }}
                       >
                         Assign Manager
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() =>
+                          setConfirmModal({
+                            message: `Delete project "${project.name}"? This will remove all associated materials and data.`,
+                            onConfirm: async () => {
+                              try {
+                                await deleteProject(project.id);
+                                setProjects((prev) => prev.filter((p) => p.id !== project.id));
+                                showToast("Project deleted.", "success");
+                              } catch (err) {
+                                showToast("Failed to delete project: " + (err.message || "Unknown error"), "error");
+                              }
+                            },
+                          })
+                        }
+                        className="edit-btn"
+                        style={{ background: "#dc3545" }}
+                      >
+                        🗑 Delete
                       </button>
                     )}
                   </div>
@@ -2695,6 +2734,12 @@ const AdminPage = () => {
               </table>
             </div>
           </section>
+        </div>
+      )}
+
+      {activeTab === "excel" && (
+        <div className="materials-tab">
+          <ExcelUpload />
         </div>
       )}
 

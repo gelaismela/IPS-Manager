@@ -19,7 +19,6 @@ import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/excel")
-@PreAuthorize("hasRole('dev')")
 public class ExcelController {
 
     @Autowired

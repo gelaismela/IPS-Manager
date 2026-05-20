@@ -242,6 +242,10 @@ export async function getMaterialsByProject(projectId) {
   return authFetch(`/projects/${projectId}/materials`, { method: "GET" });
 }
 
+export async function deleteProject(projectId) {
+  return authFetch(`/projects/${projectId}`, { method: "DELETE" });
+}
+
 export async function useMaterial(projectId, materialId, used) {
   return authFetch(`/projects/${projectId}/materials/use`, {
     method: "PUT",
