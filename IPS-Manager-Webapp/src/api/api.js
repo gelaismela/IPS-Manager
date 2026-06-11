@@ -309,7 +309,7 @@ export async function updateMaterial(id, data) {
 }
 
 export async function deleteMaterial(id) {
-  return authFetch(`/materials/delete?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  return authFetch(`/materials/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export async function createFailedRequest(payload) {

@@ -3,7 +3,9 @@ import {
   Routes,
   Route,
   Navigate,
+  useNavigate,
 } from "react-router-dom";
+import { useEffect } from "react";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import Registration from "./components/Registration";
@@ -21,6 +23,37 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PushNotificationSubscriber from "./components/PushNotificationSubscriber";
 
+function ServiceWorkerNavigate() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    const messageHandler = (event) => {
+      const data = event.data;
+      if (!data || data.action !== "navigate") return;
+      const targetUrl = data.url;
+      if (!targetUrl) return;
+
+      try {
+        const parsed = new URL(targetUrl, window.location.origin);
+        navigate(parsed.pathname + parsed.search + parsed.hash);
+      } catch {
+        if (targetUrl.startsWith("/")) {
+          navigate(targetUrl);
+        }
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", messageHandler);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", messageHandler);
+    };
+  }, [navigate]);
+
+  return null;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -28,6 +61,7 @@ function App() {
       <div className="App">
         <Router>
           <PushNotificationSubscriber />
+          <ServiceWorkerNavigate />
           <Routes>
             <Route path="/" element={<Registration />} />
             <Route

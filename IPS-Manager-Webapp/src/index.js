@@ -12,28 +12,31 @@ root.render(
 );
 
 // Register service worker for push notifications
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/service-worker.js")
-      .then((registration) => {
-        // Check for a new SW version on every page load
-        registration.update();
+if ("serviceWorker" in navigator && (window.location.protocol === "https:" || window.location.hostname === "localhost")) {
+  // Register as early as possible (don't wait for load) so mobile browsers can activate SW quickly
+  (async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("/service-worker.js");
+      // Check for a new SW version immediately
+      registration.update();
 
-        // When a new SW installs and takes over, reload the page once
-        // so users always get the latest build without a hard refresh
-        let refreshing = false;
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-          if (!refreshing) {
-            refreshing = true;
-            window.location.reload();
-          }
-        });
-      })
-      .catch((error) => {
-        console.error("❌ Service Worker registration failed:", error);
+      // When a new SW installs and takes over, reload the page once
+      // so users always get the latest build without a hard refresh
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
       });
-  });
+
+      console.log("✅ Service Worker registered:", registration.scope);
+    } catch (error) {
+      console.error("❌ Service Worker registration failed:", error);
+    }
+  })();
+} else {
+  console.warn("Service Worker not supported or insecure context (requires https:// or localhost)");
 }
 
 // If you want to start measuring performance in your app, pass a function

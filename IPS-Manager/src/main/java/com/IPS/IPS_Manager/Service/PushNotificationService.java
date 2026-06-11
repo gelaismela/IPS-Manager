@@ -25,6 +25,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -143,7 +144,6 @@ public class PushNotificationService {
     }
 
     public PushSubscription subscribe(Users user, PushSubscriptionDTO dto) {
-        // ✅ FIXED: Log user roles string cleanly out of the Set
         log.info("📝 Subscribing user {} ({}) to push notifications", user.getName(), user.getRoles());
 
         Optional<PushSubscription> existing = subscriptionRepo.findByEndpoint(dto.getEndpoint());
@@ -172,102 +172,101 @@ public class PushNotificationService {
         return saved;
     }
 
+    /**
+     * Sends a push notification to EVERY active browser session/device associated with the user account.
+     * Automatically forwards a copy to all registered Admins if the targeted user isn't an Admin.
+     */
     public void sendToUser(Users user, String title, String body, Map<String, String> data) {
-        // ✅ FIXED: Updated log context
         log.info("📧 NOTIFICATION TO USER: {} ({})", user.getName(), user.getRoles());
         log.info("   Title: {}", title);
         log.info("   Body: {}", body);
         log.info("   Data: {}", data);
 
+        // 1. Send to all active endpoints registered to this account (PC, Mobile, Table, etc.)
         List<PushSubscription> subscriptions = subscriptionRepo.findByUserAndActiveTrue(user);
 
         if (subscriptions.isEmpty()) {
-            log.warn("⚠️ No active subscriptions found for user: {}", user.getName());
-            return;
+            log.warn("⚠️ No active device subscriptions found for user: {}", user.getName());
+        } else {
+            log.info("📤 Sending to {} active user device context connection(s)", subscriptions.size());
+            for (PushSubscription sub : subscriptions) {
+                executePushDelivery(sub, title, body, data);
+            }
         }
 
-        log.info("📤 Sending to {} subscription(s)", subscriptions.size());
-
-        for (PushSubscription sub : subscriptions) {
-            try {
-                sendPushNotification(sub, title, body, data);
-                sub.setLastUsed(LocalDateTime.now());
-                subscriptionRepo.save(sub);
-                log.info("✅ Push notification sent successfully to subscription ID: {}", sub.getId());
-            } catch (Exception e) {
-                log.error("❌ Failed to send push to subscription {}: {}", sub.getId(), e.getMessage());
-
-                if (e.getMessage().contains("410") || e.getMessage().contains("Gone")) {
-                    sub.setActive(false);
-                    subscriptionRepo.save(sub);
-                    log.warn("⚠️ Marking subscription {} as inactive (endpoint no longer valid)", sub.getId());
-                }
-            }
+        // 2. 🛡️ ADMIN AUDIT HOOK: Forward mirrored data directly to all Admin devices
+        boolean isAdmin = user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.equalsIgnoreCase("admin"));
+        if (!isAdmin) {
+            log.info("👁️ [BCC Activity] Mirroring notification data stream copy to all active Admins");
+            broadcastToRoleDevices("admin", "[Admin Copy] " + title, body, data);
         }
     }
 
     /**
-     * Send notification to all users with specific role
-     * ✅ FIXED: Updated to cross-reference multiple roles cleanly using Streams
+     * Broadcasts a push notification to every active device of every user who holds this role.
+     * Automatically captures a backup copy for Admin dashboards if the role isn't 'admin'.
      */
     public void sendToRole(String role, String title, String body, Map<String, String> data) {
-        log.info("🔔 Attempting to send notification to ROLE: {}", role);
+        log.info("🔔 NOTIFICATION TO ROLE: {}", role);
         log.info("   Title: {}", title);
         log.info("   Body: {}", body);
         log.info("   Data: {}", data);
 
-        // Fetch all active subscriptions and filter programmatically by checking inside the user's role set
+        // 1. Broadcast layout message payload to original target role
+        broadcastToRoleDevices(role, title, body, data);
+
+        // 2. 🛡️ ADMIN AUDIT HOOK: If the original broadcast wasn't for admins, send them a clone update
+        if (!role.equalsIgnoreCase("admin")) {
+            log.info("👁️ [BCC Activity] Mirroring system broadcast context updates to all active Admins");
+            broadcastToRoleDevices("admin", "[Admin Copy] " + title, body, data);
+        }
+    }
+
+    /**
+     * Isolated private loop handler preventing endless loop conditions during Admin duplication routing.
+     */
+    private void broadcastToRoleDevices(String role, String title, String body, Map<String, String> data) {
         List<PushSubscription> subscriptions = subscriptionRepo.findAll().stream()
                 .filter(sub -> sub.isActive() && sub.getUser() != null && sub.getUser().getRoles() != null)
                 .filter(sub -> sub.getUser().getRoles().stream().anyMatch(r -> r.equalsIgnoreCase(role)))
-                .toList();
+                .collect(Collectors.toList());
 
         if (subscriptions.isEmpty()) {
-            log.warn("⚠️ No active subscriptions found for role: {}", role);
-
-            // Fetch all users to see if anyone holds this role
-            List<Users> usersWithRole = userRepo.findAll().stream()
-                    .filter(user -> user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.equalsIgnoreCase(role)))
-                    .toList();
-            log.info("ℹ️ There are {} user(s) with role {} but none have enabled push notifications",
-                    usersWithRole.size(), role);
+            log.debug("ℹ️ No active client connections listening for roles matching context: {}", role);
             return;
         }
 
-        log.info("📤 Sending to {} subscription(s) with role {}", subscriptions.size(), role);
-
-        int successCount = 0;
-        int failCount = 0;
-
         for (PushSubscription sub : subscriptions) {
-            try {
-                sendPushNotification(sub, title, body, data);
-                sub.setLastUsed(LocalDateTime.now());
-                subscriptionRepo.save(sub);
-                log.info("✅ Push notification sent successfully to {} (subscription ID: {})",
-                        sub.getUser().getName(), sub.getId());
-                successCount++;
-            } catch (Exception e) {
-                log.error("❌ Failed to send push to {} (subscription {}): {}",
-                        sub.getUser().getName(), sub.getId(), e.getMessage());
-                failCount++;
+            executePushDelivery(sub, title, body, data);
+        }
+    }
 
-                if (e.getMessage().contains("410") || e.getMessage().contains("Gone")) {
-                    sub.setActive(false);
-                    subscriptionRepo.save(sub);
-                    log.warn("⚠️ Marking subscription {} as inactive", sub.getId());
-                }
+    /**
+     * Low-level executor wrapper that signs the payload byte buffer with VAPID signatures and drops dead tokens.
+     */
+    private void executePushDelivery(PushSubscription sub, String title, String body, Map<String, String> data) {
+        try {
+            sendPushNotification(sub, title, body, data);
+            sub.setLastUsed(LocalDateTime.now());
+            subscriptionRepo.save(sub);
+            log.info("✅ Push successfully processed for device endpoint matching subscription identifier: {}", sub.getId());
+        } catch (Exception e) {
+            log.error("❌ Failed to deliver payload package to device token map reference {}: {}", sub.getId(), e.getMessage());
+
+            // 410 Gone / 404 Not Found explicitly means the user uninstalled or cleared cookies. Drop it.
+            if (e.getMessage().contains("410") || e.getMessage().contains("Gone") || e.getMessage().contains("404")) {
+                sub.setActive(false);
+                subscriptionRepo.save(sub);
+                log.warn("🗑️ Dropped uninstalled/expired push subscription endpoint trace token from database: {}", sub.getId());
             }
         }
-
-        log.info("📊 Notification summary: {} sent, {} failed", successCount, failCount);
     }
 
     private void sendPushNotification(PushSubscription sub, String title, String body, Map<String, String> data)
             throws Exception {
 
         if (pushService == null) {
-            log.warn("⚠️ Push service not initialized. Notification only logged to console.");
+            log.warn("⚠️ Push execution aborted: VAPID service engine not active.");
             return;
         }
 

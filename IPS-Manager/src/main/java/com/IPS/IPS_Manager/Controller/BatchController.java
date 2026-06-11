@@ -42,10 +42,13 @@ public class BatchController {
         String projectName = null;
 
         for (Map<String, Object> mat : materials) {
-            List<Integer> rawIds = (List<Integer>) mat.get("requestIds");
+            // 1. Extract as a wildcard List instead of forcing Integer
+            List<?> rawIds = (List<?>) mat.get("requestIds");
             if (rawIds == null || rawIds.isEmpty()) continue;
 
-            Long requestId = Long.valueOf(rawIds.get(0));
+// 2. Convert to string first, then safely parse into a Long (matches requestRepo.findById)
+            Long requestId = Long.valueOf(rawIds.get(0).toString());
+
             MaterialRequest request = requestRepo.findById(requestId)
                     .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 

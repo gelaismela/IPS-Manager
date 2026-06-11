@@ -71,20 +71,59 @@ self.addEventListener("notificationclick", (event) => {
 
   event.notification.close();
 
-  // Open or focus the app
+  // Determine target URL from notification data
+  const data = event.notification.data || {};
+  const type = data.type || (data.payload && data.payload.type);
+
+  let targetUrl = "/";
+
+  try {
+    if (type === "delivery") {
+      if (data.deliveryId) targetUrl = `/delivery/${data.deliveryId}`;
+      else targetUrl = "/deliveryRequests";
+    } else if (type === "material-request" || type === "mr") {
+      targetUrl = "/deliveryRequests";
+      if (data.requestId) {
+        // Keep default list route if there is no dedicated individual request page
+        targetUrl = "/deliveryRequests";
+      }
+    } else if (type === "driver") {
+      targetUrl = "/driver-deliveries";
+    } else if (type === "admin") {
+      targetUrl = "/admin";
+    } else if (type === "project") {
+      if (data.projectId) targetUrl = `/project/${data.projectId}`;
+      else targetUrl = "/projects";
+    } else if (data.url) {
+      targetUrl = data.url;
+    }
+  } catch (e) {
+    targetUrl = "/";
+  }
+
+  // Open or focus the app and navigate to the target URL
   event.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        // If a window is already open, focus it
         for (const client of clientList) {
-          if (client.url.includes(self.location.origin) && "focus" in client) {
-            return client.focus();
+          try {
+            // If a window is already open, focus it and post a message with navigation
+            if (client.url.includes(self.location.origin) && "focus" in client) {
+              client.focus();
+              // send message to client to change route if it supports messaging
+              try {
+                client.postMessage({ action: "navigate", url: targetUrl });
+              } catch (e) {}
+              return client.focus();
+            }
+          } catch (e) {
+            // ignore cross-origin client failures
           }
         }
-        // Otherwise, open a new window
+        // Otherwise, open a new window at the target URL
         if (clients.openWindow) {
-          return clients.openWindow("/");
+          return clients.openWindow(targetUrl);
         }
       })
   );
