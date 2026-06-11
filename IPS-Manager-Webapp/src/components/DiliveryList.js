@@ -100,10 +100,11 @@ const DeliveryList = () => {
 
   // Group requests by project for the batch-create view
   const grouped = requests.reduce((acc, req) => {
-    const projectId =
-      req.project?.id || req.projectId || req.projectCode || "unknown";
-    if (!acc[projectId]) acc[projectId] = [];
-    acc[projectId].push(req);
+    const projectId = req.project?.id ?? req.projectId;
+    if (!projectId) return acc;
+    const projectKey = String(projectId);
+    if (!acc[projectKey]) acc[projectKey] = [];
+    acc[projectKey].push(req);
     return acc;
   }, {});
 

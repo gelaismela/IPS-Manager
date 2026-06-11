@@ -86,11 +86,18 @@ export async function login(email, password, remember = false) {
         : [];
     const normalizedRoles = rawRoles.map((r) => {
       let role = r.toLowerCase();
-      if (role === "head_of_drivers" || role === "head_of_driver") role = "head_driver";
+      if (role === "head_of_drivers" || role === "head_of_driver")
+        role = "head_driver";
       return role;
     });
     // Priority order for primary role display
-    const PRIORITY = ["admin", "project_manager", "head_driver", "driver", "worker"];
+    const PRIORITY = [
+      "admin",
+      "project_manager",
+      "head_driver",
+      "driver",
+      "worker",
+    ];
     const primaryRole =
       PRIORITY.find((p) => normalizedRoles.includes(p)) ||
       normalizedRoles[0] ||
@@ -122,7 +129,8 @@ export async function getUserByEmail(email) {
 
 // Get current logged-in user profile
 export async function getCurrentUser() {
-  const userId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+  const userId =
+    localStorage.getItem("userId") || sessionStorage.getItem("userId");
   return authFetch(`/auth/users/${userId}`, { method: "GET" });
 }
 
@@ -227,10 +235,18 @@ export async function uploadProjectsExcel(file) {
   });
   const text = await res.text();
   let data;
-  try { data = JSON.parse(text); } catch { data = text; }
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
   if (!res.ok) {
     const error = new Error(
-      typeof data === "object" && data?.message ? data.message : typeof data === "string" ? data : `Upload failed with status ${res.status}`
+      typeof data === "object" && data?.message
+        ? data.message
+        : typeof data === "string"
+          ? data
+          : `Upload failed with status ${res.status}`,
     );
     error.status = res.status;
     throw error;
@@ -309,7 +325,9 @@ export async function updateMaterial(id, data) {
 }
 
 export async function deleteMaterial(id) {
-  return authFetch(`/materials/${encodeURIComponent(id)}`, { method: "DELETE" });
+  return authFetch(`/materials/delete?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 export async function createFailedRequest(payload) {
@@ -409,10 +427,19 @@ export async function getMyProjectRequests() {
 
 // DELIVERIES -----------------------------------
 
-export async function createDelivery({ requestId, driverId, assignedQty, date }) {
+export async function createDelivery({
+  requestId,
+  driverId,
+  assignedQty,
+  date,
+}) {
   return authFetch(`/material-requests/${requestId}/assign`, {
     method: "POST",
-    body: JSON.stringify({ driverId, assignedQuantity: assignedQty, deliveryDate: date }),
+    body: JSON.stringify({
+      driverId,
+      assignedQuantity: assignedQty,
+      deliveryDate: date,
+    }),
   });
 }
 
@@ -467,10 +494,16 @@ export async function uploadDeliveryPhoto(assignmentId, file) {
   );
   const text = await res.text();
   let data;
-  try { data = JSON.parse(text); } catch { data = text; }
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
   if (!res.ok) {
     const error = new Error(
-      typeof data === "object" && data?.message ? data.message : `Upload failed with status ${res.status}`
+      typeof data === "object" && data?.message
+        ? data.message
+        : `Upload failed with status ${res.status}`,
     );
     error.status = res.status;
     throw error;
@@ -479,7 +512,7 @@ export async function uploadDeliveryPhoto(assignmentId, file) {
 }
 
 /**
- * Get the URL to display a stored photo — pass directly to <img src="..."> 
+ * Get the URL to display a stored photo — pass directly to <img src="...">
  * @param {number} photoId
  * @returns {string}
  */
@@ -528,7 +561,9 @@ export async function deleteBatch(batchId) {
  * Fetch photo metadata list for a delivery assignment
  */
 export async function getDeliveryPhotos(assignmentId) {
-  return authFetch(`/photos/deliveries/${assignmentId}/photos`, { method: "GET" });
+  return authFetch(`/photos/deliveries/${assignmentId}/photos`, {
+    method: "GET",
+  });
 }
 
 /**

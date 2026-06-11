@@ -82,13 +82,20 @@ const Delivery = () => {
     );
   };
 
+  const projectId = Number(id);
+
   const handleSaveBatch = async () => {
+    if (Number.isNaN(projectId)) {
+      showToast("Invalid project ID. Please go back and select a valid project.", "error");
+      return;
+    }
+
     const selected = materialSelections.filter((mat) => mat.selected && mat.selectedQuantity > 0);
     if (selected.length === 0) { showToast("Select at least one material.", "warning"); return; }
     setIsSaving(true);
     try {
       await createBatch(
-        Number(id),
+        projectId,
         selected.map((mat) => ({
           materialId: mat.id,
           materialName: mat.name,
